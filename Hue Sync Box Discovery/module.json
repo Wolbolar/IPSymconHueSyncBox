@@ -1,0 +1,13 @@
+{
+  "id": "{B2F44F49-73D8-40F3-F7C0-62593FB62942}",
+  "name": "Hue Sync Box Discovery",
+  "type": 5,
+  "vendor": "Philips",
+  "aliases": [
+    "Philips Hue Sync Box Discovery"
+  ],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "HUESYNCDiscovery"
+}

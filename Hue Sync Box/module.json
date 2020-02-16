@@ -1,0 +1,12 @@
+{
+    "id": "{716FA5CE-2292-8EA5-78F9-8B245EFAF0A7}",
+    "name": "Hue Sync Box",
+    "type": 3,
+    "vendor": "Philips",
+    "aliases": ["Philips Hue Sync Box"],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "HUESYNC",
+    "url": "https://github.com/Wolbolar/IPSymconEchoRemote/blob/master/README.md"
+}

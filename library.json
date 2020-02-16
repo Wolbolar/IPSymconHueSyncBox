@@ -1,0 +1,12 @@
+{
+    "id": "{21EC6F06-3B6F-1B6D-FA89-5FBE6F7CB5C4}",
+    "author": "Fonzo",
+    "name": "Philips Hue Sync Box",
+    "url": "https://www2.meethue.com/de-de/p/hue-play-hdmi-sync-box/8718699704803",
+    "compatibility": {
+        "version": "5.2"
+    },
+    "version": "0.3",
+    "build": 1,
+    "date": 0
+}

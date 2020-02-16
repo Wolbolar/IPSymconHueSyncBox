@@ -1,0 +1,20 @@
+{
+  "translations": {
+    "de": {
+      "Background Discovery of Philips Hue Sync Box": "Hintergrundsuche nach Philips Hue Sync Box",
+      "name": "Name",
+      "host": "IP Adresse",
+      "hostname": "Gerätename",
+      "devicetype": "Gerätetyp",
+      "UUID": "UUID",
+      "Refresh list": "Liste aktualisieren",
+      "Read configuration": "Konfiguration auslesen",
+      "Creating instance.": "Instanz erstellen.",
+      "Philips Hue Sync Box Discovery created.": "Philips Hue Sync Box Discovery erstellt.",
+      "interface closed.": "Interface geschlossen.",
+      "Please follow the instructions.": "Bitte der Anleitung folgen.",
+      "no category selected.": "keine Kategorie ausgewählt."
+
+    }
+  }
+}
