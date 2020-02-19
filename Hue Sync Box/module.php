@@ -485,9 +485,9 @@ class HueSyncBox extends IPSModule
             $mode = $execution->mode;
             $this->SetValue('Mode', $this->GetModeValue($mode));
             if ($mode == 'passthrough' || $mode == 'video' || $mode == 'music' || $mode == 'game') {
-                $this->SetValue('Status', true);
+                $this->SetValue('State', true);
             } elseif ($mode == 'powersave') {
-                $this->SetValue('Status', false);
+                $this->SetValue('State', false);
             }
             $syncActive = $execution->syncActive;
             $this->WriteAttributeBoolean('syncActive', $syncActive);
@@ -1084,7 +1084,7 @@ class HueSyncBox extends IPSModule
                 $this->Intensity($mode, 'intense');
             }
         }
-        if ($Ident === 'Status') {
+        if ($Ident === 'State') {
             if ($Value == true) {
                 $this->Mode('passthrough');
             }
@@ -1298,6 +1298,7 @@ class HueSyncBox extends IPSModule
             [
                 'type'    => 'ExpansionPanel',
                 'caption' => 'Registrations',
+                'visible'  => $list_visible,
                 'items'   => [
                     [
                         'type'     => 'List',
