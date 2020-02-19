@@ -362,7 +362,7 @@ class HueSyncBox extends IPSModule
         $this->WriteAttributeInteger('apiLevel', $apiLevel);
         $firmwareVersion = $device_info->firmwareVersion;
         $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
-        $this->SetValue('Firmware', $firmwareVersion);
+        $this->SetValue('firmwareVersion', $firmwareVersion);
         $buildNumber = $device_info->buildNumber;
         $this->WriteAttributeInteger('buildNumber', $buildNumber);
         $lastCheckedUpdate = $device_info->lastCheckedUpdate;
@@ -444,7 +444,7 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeInteger('apiLevel', $apiLevel);
             $firmwareVersion = $device_info->firmwareVersion;
             $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
-            $this->SetValue('Firmware', $firmwareVersion);
+            $this->SetValue('firmwareVersion', $firmwareVersion);
             $buildNumber = $device_info->buildNumber;
             $this->WriteAttributeInteger('buildNumber', $buildNumber);
             $lastCheckedUpdate = $device_info->lastCheckedUpdate;
