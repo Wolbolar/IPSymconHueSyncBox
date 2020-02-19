@@ -302,7 +302,13 @@ class HueSyncBox extends IPSModule
             switch ($vartype) {
                 case VARIABLETYPE_BOOLEAN:
                     $objid = $this->RegisterVariableBoolean($ident, $name, $profile, $position);
-                    $value = $this->ReadAttributeBoolean($ident);
+                    if($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode')
+                    {
+                        $value = boolval($this->ReadAttributeInteger($ident));
+                    }
+                    else{
+                        $value = $this->ReadAttributeBoolean($ident);
+                    }
                     $this->SetValue($ident, $value);
                     break;
                 case VARIABLETYPE_INTEGER:
