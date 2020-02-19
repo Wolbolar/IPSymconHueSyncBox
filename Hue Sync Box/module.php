@@ -484,6 +484,7 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Execution Info', json_encode($execution), 0);
             $mode = $execution->mode;
             $this->SetValue('Mode', $this->GetModeValue($mode));
+            $this->WriteAttributeInteger('Mode', $this->GetModeValue($mode));
             if ($mode == 'passthrough' || $mode == 'video' || $mode == 'music' || $mode == 'game') {
                 $this->SetValue('State', true);
             } elseif ($mode == 'powersave') {
@@ -496,7 +497,7 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
             $this->SetValue('hdmiActive', $hdmiActive);
             $hdmiSource = $execution->hdmiSource;
-            $this->WriteAttributeInteger('Input', $hdmiSource);
+            $this->WriteAttributeInteger('Input', $this->GetHDMIValue($hdmiSource));
             $this->SetValue('Input', $this->GetHDMIValue($hdmiSource));
             $brightness = $execution->brightness;
             $this->WriteAttributeInteger('Brightness', $brightness);
