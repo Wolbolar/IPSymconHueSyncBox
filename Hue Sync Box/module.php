@@ -107,6 +107,14 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeBoolean('backlight_game', false);
         $this->RegisterAttributeBoolean('backlight_game_enabled', false);
         $this->RegisterAttributeString('registrations', '[]');
+        $this->RegisterAttributeInteger('Brightness', 0);
+        $this->RegisterAttributeInteger('Input', 0);
+        $this->RegisterAttributeInteger('Mode', 0);
+        $this->RegisterAttributeInteger('Intensity', 0);
+        $this->RegisterAttributeBoolean('State', false);
+        $this->RegisterAttributeBoolean('LEDMode', false);
+
+
 
         //we will wait until the kernel is ready
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
@@ -225,10 +233,10 @@ class HueSyncBox extends IPSModule
             'Intensity', $this->Translate('Intensity'), 'Hue.Sync.Intensity', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $this->SetupVariable(
-            'Firmware', $this->Translate('Firmware'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, true
+            'firmwareVersion', $this->Translate('Firmware'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, true
         );
         $this->SetupVariable(
-            'Status', $this->Translate('State'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
+            'State', $this->Translate('State'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
         $this->SetupVariable(
             'LEDMode', $this->Translate('LED Mode'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
@@ -488,8 +496,10 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
             $this->SetValue('hdmiActive', $hdmiActive);
             $hdmiSource = $execution->hdmiSource;
+            $this->WriteAttributeInteger('Input', $hdmiSource);
             $this->SetValue('Input', $this->GetHDMIValue($hdmiSource));
             $brightness = $execution->brightness;
+            $this->WriteAttributeInteger('Brightness', $brightness);
             $this->SetValue('Brightness', $brightness);
             $lastSyncMode = $execution->lastSyncMode;
             $this->WriteAttributeString('lastSyncMode', $lastSyncMode);
@@ -997,7 +1007,7 @@ class HueSyncBox extends IPSModule
         }
         $info       = curl_getinfo($ch);
         $header_out = curl_getinfo($ch, CURLINFO_HEADER_OUT);
-        $this->SendDebug(__FUNCTION__, 'Header Out:' . json_encode($header_out), 0);
+        $this->SendDebug(__FUNCTION__, 'Header Out:' . $header_out, 0);
         curl_close($ch);
 
         return $this->getReturnValues($info, $result);
