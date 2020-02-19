@@ -260,16 +260,16 @@ class HueSyncBox extends IPSModule
             'input4_name', $this->Translate('HDMI Input 4 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
         );
         $this->SetupVariable(
-            'cecPowersave', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
+            'cecPowersave', $this->Translate('CEC Powersave'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'usbPowersave', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
+            'usbPowersave', $this->Translate('USB Powersave'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'backlight_video', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
+            'backlight_video', $this->Translate('Backlight Video'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'backlight_game', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
+            'backlight_game', $this->Translate('Backlight Game'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
 
         $this->SetupVariable(
