@@ -664,17 +664,17 @@ class HueSyncBox extends IPSModule
         if ($mode == 'video') {
             $video     = json_decode($this->ReadAttributeString('video'));
             $intensity = $video->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         if ($mode == 'music') {
             $music     = json_decode($this->ReadAttributeString('music'));
             $intensity = $music->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         if ($mode == 'game') {
             $game      = json_decode($this->ReadAttributeString('game'));
             $intensity = $game->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         return $this->SendExecution(['mode' => $mode]);
     }
