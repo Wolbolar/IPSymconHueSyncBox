@@ -727,7 +727,7 @@ class HueSyncBox extends IPSModule
      */
     public function SetHDMIInput(int $input)
     {
-        return $this->SendBehavior(['input' . $input => 1]);
+        return $this->SendExecution(['hdmiSource' => 'input'.$input]);
     }
 
     /** Check firmware update available
@@ -1542,7 +1542,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input2_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]],
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input2_name_enabled", $input2_name_enabled);'],]],
             [
                 'type'    => 'RowLayout',
                 'visible' => true,
@@ -1560,7 +1560,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input3_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]],
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input3_name_enabled", $input3_name_enabled);'],]],
             [
                 'type'    => 'RowLayout',
                 'visible' => true,
@@ -1578,7 +1578,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input4_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]]
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input4_name_enabled", $input4_name_enabled);'],]]
 
         ];
         return $form;
