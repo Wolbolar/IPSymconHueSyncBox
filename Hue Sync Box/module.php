@@ -670,6 +670,37 @@ class HueSyncBox extends IPSModule
         return $intensity_value;
     }
 
+    /** Power on
+     * @return array
+     */
+    public function PowerOn()
+    {
+        return $this->Mode('passthrough');
+    }
+
+    /** Power off
+     * @return array
+     */
+    public function PowerOff()
+    {
+        return $this->Mode('powersave');
+    }
+
+    /** Power Toggle
+     *
+     */
+    public function PowerToggle()
+    {
+        $state = GetValue($this->GetIDForIdent('State'));
+        if($state)
+        {
+            $this->PowerOff();
+        }
+        else{
+            $this->PowerOn();
+        }
+    }
+
     /** Change mode
      *
      * @param string $mode passthrough | powersave | video | music | game
@@ -1093,10 +1124,10 @@ class HueSyncBox extends IPSModule
         }
         if ($Ident === 'State') {
             if ($Value == true) {
-                $this->Mode('passthrough');
+                $this->PowerOn();
             }
             if ($Value == false) {
-                $this->Mode('powersave');
+                $this->PowerOff();
             }
             $this->SendDebug('State', strval($Value) . ' selected', 0);
         }
