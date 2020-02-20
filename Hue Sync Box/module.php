@@ -107,6 +107,14 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeBoolean('backlight_game', false);
         $this->RegisterAttributeBoolean('backlight_game_enabled', false);
         $this->RegisterAttributeString('registrations', '[]');
+        $this->RegisterAttributeInteger('Brightness', 0);
+        $this->RegisterAttributeInteger('Input', 0);
+        $this->RegisterAttributeInteger('Mode', 0);
+        $this->RegisterAttributeInteger('Intensity', 0);
+        $this->RegisterAttributeBoolean('State', false);
+        $this->RegisterAttributeBoolean('LEDMode', false);
+
+
 
         //we will wait until the kernel is ready
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
@@ -194,18 +202,16 @@ class HueSyncBox extends IPSModule
     {
         $this->RegisterProfile('Hue.Sync.Brightness', 'Intensity', '', ' %', 0, 200, 1, 0, VARIABLETYPE_INTEGER);
         $this->SetupVariable(
-            'Brightness', $this->Translate('Brightness'), 'Hue.Sync.Brightness', $this->_getPosition(), VARIABLETYPE_INTEGER,
-            true, true
+            'Brightness', $this->Translate('Brightness'), 'Hue.Sync.Brightness', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $input_ass = [
             [0, $this->Translate("HDMI 1"), "", -1],
             [1, $this->Translate("HDMI 2"), "", -1],
             [2, $this->Translate("HDMI 3"), "", -1],
             [3, $this->Translate("HDMI 4"), "", -1]];
-        $this->RegisterProfileAssociation("Hue.Sync.Input", "Execute", "", "", 0, 3, 1, 0, VARIABLETYPE_INTEGER, $input_ass);
+        $this->RegisterProfileAssociation("Hue.Sync.Input", "Execute", "", "", 0, 3, 0, 0, VARIABLETYPE_INTEGER, $input_ass);
         $this->SetupVariable(
-            'Input', $this->Translate('Input'), 'Hue.Sync.Input', $this->_getPosition(), VARIABLETYPE_INTEGER,
-            true, true
+            'Input', $this->Translate('Input'), 'Hue.Sync.Input', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $mode_ass = [
             [0, $this->Translate("Passthrough"), "", -1],
@@ -213,77 +219,61 @@ class HueSyncBox extends IPSModule
             [2, $this->Translate("Video"), "", -1],
             [3, $this->Translate("Music"), "", -1],
             [4, $this->Translate("Game"), "", -1]];
-        $this->RegisterProfileAssociation("Hue.Sync.Mode", "Execute", "", "", 0, 4, 1, 0, VARIABLETYPE_INTEGER, $mode_ass);
+        $this->RegisterProfileAssociation("Hue.Sync.Mode", "Execute", "", "", 0, 4, 0, 0, VARIABLETYPE_INTEGER, $mode_ass);
         $this->SetupVariable(
-            'Mode', $this->Translate('Mode'), 'Hue.Sync.Mode', $this->_getPosition(), VARIABLETYPE_INTEGER,
-            true, true
+            'Mode', $this->Translate('Mode'), 'Hue.Sync.Mode', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $intensity_ass = [
             [0, $this->Translate("subtle"), "", -1],
             [1, $this->Translate("moderate"), "", -1],
             [2, $this->Translate("high"), "", -1],
             [3, $this->Translate("intense"), "", -1]];
-        $this->RegisterProfileAssociation("Hue.Sync.Intensity", "Execute", "", "", 0, 3, 1, 0, VARIABLETYPE_INTEGER, $intensity_ass);
+        $this->RegisterProfileAssociation("Hue.Sync.Intensity", "Execute", "", "", 0, 3, 0, 0, VARIABLETYPE_INTEGER, $intensity_ass);
         $this->SetupVariable(
-            'Intensity', $this->Translate('Intensity'), 'Hue.Sync.Intensity', $this->_getPosition(), VARIABLETYPE_INTEGER,
-            true, true
+            'Intensity', $this->Translate('Intensity'), 'Hue.Sync.Intensity', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $this->SetupVariable(
-            'Firmware', $this->Translate('Firmware'), '', $this->_getPosition(), VARIABLETYPE_STRING,
-            false, true
+            'firmwareVersion', $this->Translate('Firmware'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, true
         );
         $this->SetupVariable(
-            'Status', $this->Translate('State'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, true
+            'State', $this->Translate('State'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
         $this->SetupVariable(
-            'LEDMode', $this->Translate('LED Mode'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, true
+            'LEDMode', $this->Translate('LED Mode'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
         $this->SetupVariable(
-            'syncActive', $this->Translate('Sync Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            false, true
+            'syncActive', $this->Translate('Sync Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, false, true
         );
         $this->SetupVariable(
-            'hdmiActive', $this->Translate('HDMI Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            false, true
+            'hdmiActive', $this->Translate('HDMI Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, false, true
         );
         $this->SetupVariable(
-            'input1_name', $this->Translate('HDMI Input 1 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING,
-            false, false
+            'input1_name', $this->Translate('HDMI Input 1 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
         );
         $this->SetupVariable(
-            'input2_name', $this->Translate('HDMI Input 2 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING,
-            false, false
+            'input2_name', $this->Translate('HDMI Input 2 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
         );
         $this->SetupVariable(
-            'input3_name', $this->Translate('HDMI Input 3 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING,
-            false, false
+            'input3_name', $this->Translate('HDMI Input 3 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
         );
         $this->SetupVariable(
-            'input4_name', $this->Translate('HDMI Input 4 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING,
-            false, false
+            'input4_name', $this->Translate('HDMI Input 4 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
         );
         $this->SetupVariable(
-            'cecPowersave', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, false
+            'cecPowersave', $this->Translate('CEC Powersave'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'usbPowersave', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, false
+            'usbPowersave', $this->Translate('USB Powersave'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'backlight_video', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, false
+            'backlight_video', $this->Translate('Backlight Video'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
         $this->SetupVariable(
-            'backlight_game', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, false
+            'backlight_game', $this->Translate('Backlight Game'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
 
         $this->SetupVariable(
-            'arcBypassMode', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN,
-            true, false
+            'arcBypassMode', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
 
     }
@@ -312,7 +302,13 @@ class HueSyncBox extends IPSModule
             switch ($vartype) {
                 case VARIABLETYPE_BOOLEAN:
                     $objid = $this->RegisterVariableBoolean($ident, $name, $profile, $position);
-                    $value = $this->ReadAttributeBoolean($ident);
+                    if($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode')
+                    {
+                        $value = boolval($this->ReadAttributeInteger($ident));
+                    }
+                    else{
+                        $value = $this->ReadAttributeBoolean($ident);
+                    }
                     $this->SetValue($ident, $value);
                     break;
                 case VARIABLETYPE_INTEGER:
@@ -372,7 +368,7 @@ class HueSyncBox extends IPSModule
         $this->WriteAttributeInteger('apiLevel', $apiLevel);
         $firmwareVersion = $device_info->firmwareVersion;
         $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
-        $this->SetValue('Firmware', $firmwareVersion);
+        $this->SetValue('firmwareVersion', $firmwareVersion);
         $buildNumber = $device_info->buildNumber;
         $this->WriteAttributeInteger('buildNumber', $buildNumber);
         $lastCheckedUpdate = $device_info->lastCheckedUpdate;
@@ -454,7 +450,7 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeInteger('apiLevel', $apiLevel);
             $firmwareVersion = $device_info->firmwareVersion;
             $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
-            $this->SetValue('Firmware', $firmwareVersion);
+            $this->SetValue('firmwareVersion', $firmwareVersion);
             $buildNumber = $device_info->buildNumber;
             $this->WriteAttributeInteger('buildNumber', $buildNumber);
             $lastCheckedUpdate = $device_info->lastCheckedUpdate;
@@ -494,6 +490,12 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Execution Info', json_encode($execution), 0);
             $mode = $execution->mode;
             $this->SetValue('Mode', $this->GetModeValue($mode));
+            $this->WriteAttributeInteger('Mode', $this->GetModeValue($mode));
+            if ($mode == 'passthrough' || $mode == 'video' || $mode == 'music' || $mode == 'game') {
+                $this->SetValue('State', true);
+            } elseif ($mode == 'powersave') {
+                $this->SetValue('State', false);
+            }
             $syncActive = $execution->syncActive;
             $this->WriteAttributeBoolean('syncActive', $syncActive);
             $this->SetValue('syncActive', $syncActive);
@@ -501,8 +503,10 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
             $this->SetValue('hdmiActive', $hdmiActive);
             $hdmiSource = $execution->hdmiSource;
+            $this->WriteAttributeInteger('Input', $this->GetHDMIValue($hdmiSource));
             $this->SetValue('Input', $this->GetHDMIValue($hdmiSource));
             $brightness = $execution->brightness;
+            $this->WriteAttributeInteger('Brightness', $brightness);
             $this->SetValue('Brightness', $brightness);
             $lastSyncMode = $execution->lastSyncMode;
             $this->WriteAttributeString('lastSyncMode', $lastSyncMode);
@@ -666,6 +670,39 @@ class HueSyncBox extends IPSModule
         return $intensity_value;
     }
 
+    /** Power on
+     * @return array
+     */
+    public function PowerOn()
+    {
+        $this->SetValue('State', true);
+        return $this->Mode('passthrough');
+    }
+
+    /** Power off
+     * @return array
+     */
+    public function PowerOff()
+    {
+        $this->SetValue('State', false);
+        return $this->Mode('powersave');
+    }
+
+    /** Power Toggle
+     *
+     */
+    public function PowerToggle()
+    {
+        $state = GetValue($this->GetIDForIdent('State'));
+        if($state)
+        {
+            $this->PowerOff();
+        }
+        else{
+            $this->PowerOn();
+        }
+    }
+
     /** Change mode
      *
      * @param string $mode passthrough | powersave | video | music | game
@@ -677,17 +714,17 @@ class HueSyncBox extends IPSModule
         if ($mode == 'video') {
             $video     = json_decode($this->ReadAttributeString('video'));
             $intensity = $video->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         if ($mode == 'music') {
             $music     = json_decode($this->ReadAttributeString('music'));
             $intensity = $music->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         if ($mode == 'game') {
             $game      = json_decode($this->ReadAttributeString('game'));
             $intensity = $game->intensity;
-            $this->SetValue('Intensity', $intensity);
+            $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
         return $this->SendExecution(['mode' => $mode]);
     }
@@ -713,6 +750,17 @@ class HueSyncBox extends IPSModule
     public function Intensity(string $mode, string $intensity)
     {
         return $this->SendExecution([$mode => ['intensity' => $intensity]]);
+    }
+
+    /** Set HDMI Input
+     *
+     * @param int $input
+     *
+     * @return mixed
+     */
+    public function SetHDMIInput(int $input)
+    {
+        return $this->SendExecution(['hdmiSource' => 'input'.$input]);
     }
 
     /** Check firmware update available
@@ -762,36 +810,36 @@ class HueSyncBox extends IPSModule
 
     public function DefineInput1Name(string $name)
     {
-        $name2 = $this->ReadAttributeString('input2_name');
-        $name3 = $this->ReadAttributeString('input3_name');
-        $name4 = $this->ReadAttributeString('input4_name');
+        $name2       = $this->ReadAttributeString('input2_name');
+        $name3       = $this->ReadAttributeString('input3_name');
+        $name4       = $this->ReadAttributeString('input4_name');
         $input_names = $this->DefineInputNames($name, $name2, $name3, $name4);
         return $input_names;
     }
 
     public function DefineInput2Name(string $name)
     {
-        $name1 = $this->ReadAttributeString('input1_name');
-        $name3 = $this->ReadAttributeString('input3_name');
-        $name4 = $this->ReadAttributeString('input4_name');
+        $name1       = $this->ReadAttributeString('input1_name');
+        $name3       = $this->ReadAttributeString('input3_name');
+        $name4       = $this->ReadAttributeString('input4_name');
         $input_names = $this->DefineInputNames($name1, $name, $name3, $name4);
         return $input_names;
     }
 
     public function DefineInput3Name(string $name)
     {
-        $name1 = $this->ReadAttributeString('input1_name');
-        $name2 = $this->ReadAttributeString('input2_name');
-        $name4 = $this->ReadAttributeString('input4_name');
+        $name1       = $this->ReadAttributeString('input1_name');
+        $name2       = $this->ReadAttributeString('input2_name');
+        $name4       = $this->ReadAttributeString('input4_name');
         $input_names = $this->DefineInputNames($name1, $name2, $name, $name4);
         return $input_names;
     }
 
     public function DefineInput4Name(string $name)
     {
-        $name1 = $this->ReadAttributeString('input1_name');
-        $name2 = $this->ReadAttributeString('input2_name');
-        $name3 = $this->ReadAttributeString('input3_name');
+        $name1       = $this->ReadAttributeString('input1_name');
+        $name2       = $this->ReadAttributeString('input2_name');
+        $name3       = $this->ReadAttributeString('input3_name');
         $input_names = $this->DefineInputNames($name1, $name2, $name3, $name);
         return $input_names;
     }
@@ -954,6 +1002,11 @@ class HueSyncBox extends IPSModule
         } elseif ($command == '/api/v1/registrations') {
             $headers[] = "Accept-Charset: UTF-8";
             $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
+        } elseif ($type == 'PUT') {
+            $headers[] = "Accept-Charset: UTF-8";
+            $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
+            $headers[] = "Content-Length: " . strlen($data_json);
+            $headers[] = "Authorization: Bearer " . $this->ReadAttributeString('AccessToken');
         } else {
             $headers[] = "Accept-Charset: UTF-8";
             $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
@@ -965,7 +1018,7 @@ class HueSyncBox extends IPSModule
         $ch = curl_init();
         if ($type == 'PUT') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'charset=utf-8', 'Content-Length: ' . strlen($data_json)]);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
         if ($type == 'POST') {
             curl_setopt($ch, CURLOPT_POST, 1);
@@ -992,7 +1045,9 @@ class HueSyncBox extends IPSModule
         if (curl_errno($ch)) {
             trigger_error('Error:' . curl_error($ch));
         }
-        $info = curl_getinfo($ch);
+        $info       = curl_getinfo($ch);
+        $header_out = curl_getinfo($ch, CURLINFO_HEADER_OUT);
+        $this->SendDebug(__FUNCTION__, 'Header Out:' . $header_out, 0);
         curl_close($ch);
 
         return $this->getReturnValues($info, $result);
@@ -1038,19 +1093,20 @@ class HueSyncBox extends IPSModule
         }
         if ($Ident === 'Input') {
             if ($Value == 0) {
-                $this->Mode('passthrough');
+                $this->SendDebug('Input', 'HDMI 1 selected', 0);
+                $this->SetHDMIInput(1);
             }
             if ($Value == 1) {
-                $this->Mode('powersave');
+                $this->SendDebug('Input', 'HDMI 2 selected', 0);
+                $this->SetHDMIInput(2);
             }
             if ($Value == 2) {
-                $this->Mode('video');
+                $this->SendDebug('Input', 'HDMI 3 selected', 0);
+                $this->SetHDMIInput(3);
             }
             if ($Value == 3) {
-                $this->Mode('music');
-            }
-            if ($Value == 4) {
-                $this->Mode('game');
+                $this->SendDebug('Input', 'HDMI 4 selected', 0);
+                $this->SetHDMIInput(4);
             }
         }
         if ($Ident === 'Intensity') {
@@ -1068,11 +1124,25 @@ class HueSyncBox extends IPSModule
                 $this->Intensity($mode, 'intense');
             }
         }
-        if ($Ident === 'Status') {
-            $this->Brightness($Value);
+        if ($Ident === 'State') {
+            if ($Value == true) {
+                $this->PowerOn();
+            }
+            if ($Value == false) {
+                $this->PowerOff();
+            }
+            $this->SendDebug('State', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'LEDMode') {
             $this->Brightness($Value);
+        }
+        if ($Ident === 'syncActive') {
+            // todo
+            $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
+        }
+        if ($Ident === 'hdmiActive') {
+            // todo
+            $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'input1_name') {
             $this->DefineInput1Name($Value);
@@ -1102,7 +1172,6 @@ class HueSyncBox extends IPSModule
             $this->ARC_Bypass($Value);
         }
     }
-
 
     /***********************************************************
      * Configuration Form
@@ -1145,19 +1214,24 @@ class HueSyncBox extends IPSModule
         $autoUpdateEnabled        = $this->ReadAttributeBoolean('autoUpdateEnabled');
         $autoUpdateTime           = $this->ReadAttributeInteger('autoUpdateTime');
         $list_visible             = false;
-        $registrations_values = [];
+        $registrations_values     = [];
         if ($access_token != '') {
-            $list_visible = true;
+            $list_visible  = true;
             $registrations = json_decode($this->ReadAttributeString('registrations'));
-            foreach($registrations as $key => $registration)
-            {
-                $position = $key;
-                $appName = $registration->appName;
-                $instanceName = $registration->instanceName;
-                $role = $registration->role;
-                $lastUsed = $registration->lastUsed;
-                $created = $registration->created;
-                $registrations_values[] = ['position' => $position, 'appName' => $appName, 'instanceName' => $instanceName, 'role' => $role, 'lastUsed' => $lastUsed, 'created' => $created];
+            foreach ($registrations as $key => $registration) {
+                $position               = $key;
+                $appName                = $registration->appName;
+                $instanceName           = $registration->instanceName;
+                $role                   = $registration->role;
+                $lastUsed               = $registration->lastUsed;
+                $created                = $registration->created;
+                $registrations_values[] = [
+                    'position'     => $position,
+                    'appName'      => $appName,
+                    'instanceName' => $instanceName,
+                    'role'         => $role,
+                    'lastUsed'     => $lastUsed,
+                    'created'      => $created];
             }
         }
         $form = [
@@ -1262,57 +1336,56 @@ class HueSyncBox extends IPSModule
                         'autoUpdateEnabled'        => $autoUpdateEnabled,
                         'autoUpdateTime'           => $autoUpdateTime]]],
             [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Registrations',
-            'items'   => [
-                [
-                    'type'     => 'List',
-                    'name'     => 'registrations',
-                    'caption'  => 'Registrations',
-                    'visible'  => $list_visible,
-                    'rowCount' => 20,
-                    'sort'     => [
-                        'column'    => 'position',
-                        'direction' => 'ascending'],
-                    'columns'  => [
-                        [
-                            'name'    => 'position',
-                            'caption' => 'position',
-                            'width'   => '100px',
-                            'save'    => true,
-                            'visible' => true],
-                        [
-                            'name'    => 'appName',
-                            'caption' => 'App Name',
-                            'width'   => '200px',
-                            'save'    => true],
-                        [
-                            'name'    => 'instanceName',
-                            'caption' => 'Instance Name',
-                            'width'   => '200px',
-                            'save'    => true,
-                            'visible' => true],
-                        [
-                            'name'    => 'role',
-                            'caption' => 'role',
-                            'width'   => '200px',
-                            'save'    => true,
-                            'visible' => true],
-                        [
-                            'name'    => 'lastUsed',
-                            'caption' => 'Last Used',
-                            'width'   => '200px',
-                            'save'    => true,
-                            'visible' => true],
-                        [
-                            'name'    => 'created',
-                            'caption' => 'created',
-                            'width'   => '200px',
-                            'save'    => true,
-                            'visible' => true]],
-                    'values'   => $registrations_values]
-            ]]
-          ];
+                'type'    => 'ExpansionPanel',
+                'caption' => 'Registrations',
+                'visible'  => $list_visible,
+                'items'   => [
+                    [
+                        'type'     => 'List',
+                        'name'     => 'registrations',
+                        'caption'  => 'Registrations',
+                        'visible'  => $list_visible,
+                        'rowCount' => 20,
+                        'sort'     => [
+                            'column'    => 'position',
+                            'direction' => 'ascending'],
+                        'columns'  => [
+                            [
+                                'name'    => 'position',
+                                'caption' => 'position',
+                                'width'   => '100px',
+                                'save'    => true,
+                                'visible' => true],
+                            [
+                                'name'    => 'appName',
+                                'caption' => 'App Name',
+                                'width'   => '200px',
+                                'save'    => true],
+                            [
+                                'name'    => 'instanceName',
+                                'caption' => 'Instance Name',
+                                'width'   => '200px',
+                                'save'    => true,
+                                'visible' => true],
+                            [
+                                'name'    => 'role',
+                                'caption' => 'role',
+                                'width'   => '200px',
+                                'save'    => true,
+                                'visible' => true],
+                            [
+                                'name'    => 'lastUsed',
+                                'caption' => 'Last Used',
+                                'width'   => '200px',
+                                'save'    => true,
+                                'visible' => true],
+                            [
+                                'name'    => 'created',
+                                'caption' => 'created',
+                                'width'   => '200px',
+                                'save'    => true,
+                                'visible' => true]],
+                        'values'   => $registrations_values]]]];
         return $form;
     }
 
@@ -1335,8 +1408,7 @@ class HueSyncBox extends IPSModule
                 [
                     'type'    => 'Button',
                     'caption' => 'Registration',
-                    'onClick' => 'HUESYNC_Registration($id);'],
-                ];
+                    'onClick' => 'HUESYNC_Registration($id);'],];
         } else {
             $form = [
                 [
@@ -1373,8 +1445,7 @@ class HueSyncBox extends IPSModule
                             'name'     => 'AdvancedSynchronizationSettings',
                             'visible'  => true,
                             'expanded' => false,
-                            'items'    => $this->FormAdvancedSynchronizationSettings()]]]
-            ];
+                            'items'    => $this->FormAdvancedSynchronizationSettings()]]]];
         }
         return $form;
     }
@@ -1443,23 +1514,21 @@ class HueSyncBox extends IPSModule
 
     protected function GetEntertainmentZoneValues()
     {
-        $hue_groupId = $this->ReadAttributeString('hue_groupId');
-        $hue_groups_json = $this->ReadAttributeString('hue_groups');
-        $hue_groups = json_decode($hue_groups_json);
+        $hue_groupId             = $this->ReadAttributeString('hue_groupId');
+        $hue_groups_json         = $this->ReadAttributeString('hue_groups');
+        $hue_groups              = json_decode($hue_groups_json);
         $EntertainmentZoneValues = [];
-        foreach($hue_groups as $key => $group)
-        {
-            if($key == $hue_groupId)
-            {
+        foreach ($hue_groups as $key => $group) {
+            if ($key == $hue_groupId) {
                 $selected = true;
-            }
-            else{
+            } else {
                 $selected = false;
             }
-            $name = $group->name;
-            $numLights = $group->numLights;
-            $active = $group->active;
-            $EntertainmentZoneValues[] = ['groupId' => $key, 'name' => $name, 'numLights' => $numLights, 'active' => $active, 'selected' => $selected];
+            $name                      = $group->name;
+            $numLights                 = $group->numLights;
+            $active                    = $group->active;
+            $EntertainmentZoneValues[] =
+                ['groupId' => $key, 'name' => $name, 'numLights' => $numLights, 'active' => $active, 'selected' => $selected];
         }
         return $EntertainmentZoneValues;
     }
@@ -1506,7 +1575,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input2_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]],
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input2_name_enabled", $input2_name_enabled);'],]],
             [
                 'type'    => 'RowLayout',
                 'visible' => true,
@@ -1524,7 +1593,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input3_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]],
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input3_name_enabled", $input3_name_enabled);'],]],
             [
                 'type'    => 'RowLayout',
                 'visible' => true,
@@ -1542,7 +1611,7 @@ class HueSyncBox extends IPSModule
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
                         'value'    => $this->ReadAttributeBoolean('input4_name_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input1_name_enabled", $input1_name_enabled);'],]]
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "input4_name_enabled", $input4_name_enabled);'],]]
 
         ];
         return $form;
@@ -1602,8 +1671,7 @@ class HueSyncBox extends IPSModule
             [
                 'type'    => 'Label',
                 'visible' => true,
-                'caption' => 'Connect a USB cable to your TV to recognize its switched-on status and to be able to switch the Sync Box on and off accordingly. Deactivating this function does not deactivate the automatic switch-on.'],
-            /*
+                'caption' => 'Connect a USB cable to your TV to recognize its switched-on status and to be able to switch the Sync Box on and off accordingly. Deactivating this function does not deactivate the automatic switch-on.'],/*
             [
                 'type'    => 'RowLayout',
                 'visible' => true,

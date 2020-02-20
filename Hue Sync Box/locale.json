@@ -72,7 +72,11 @@
             "ARC bypass": "ARC-Bypass",
             "Set a minimum brightness for the background brightness visible in each synchronization mode, even if the screen is black.": "Stelle eine Mindest-Helligkeit für die in jedem Synchronisierungsmodus sichtbare Hintergrundhelligkeit ein, auch wenn der Bildschirm schwarz ist.",
             "When your sync box is connected between an AV receiver and TV, enable this setting to allow the ARC signal to properly pass through. Note: This will only work with 1 connected input.": "Wenn Deine Sync Box zwischen einem AV-Receiver und einem Fernsehgerät angeschlossen ist, aktivieren diese Einstellung, damit das ARC-Signal ordnungsgemäß durchgelassen werden kann. Hinweis: Dies funktioniert nur mit 1 angeschlossenen Eingang.",
-            "Create Variable for Webfront": "Variable für Webfront erstellen"
+            "Create Variable for Webfront": "Variable für Webfront erstellen",
+            "CEC Powersave": "CEC Powersave",
+            "USB Powersave": "USB Powersave",
+            "Backlight Video": "Hintergrundbeleuchtung Video",
+            "Backlight Game": "Hintergrundbeleuchtung Game"
         }
     }
 }
