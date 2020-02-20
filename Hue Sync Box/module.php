@@ -12,11 +12,11 @@ class HueSyncBox extends IPSModule
     // helper properties
     private $position = 0;
 
-    private const APPSECRET = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
-    private const APIPATH   = '/api/v1';
-    private const Video_Mode   = 2;
-    private const Music_Mode   = 3;
-    private const Game_Mode   = 4;
+    private const APPSECRET  = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
+    private const APIPATH    = '/api/v1';
+    private const Video_Mode = 2;
+    private const Music_Mode = 3;
+    private const Game_Mode  = 4;
 
 
     public function Create()
@@ -57,7 +57,7 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeString('hue_connectionState', '');
         $this->RegisterAttributeBoolean('syncActive', false);
         $this->RegisterAttributeBoolean('hdmiActive', false);
-        $this->RegisterAttributeString('lastSyncMode', '');
+        $this->RegisterAttributeString('lastSyncMode', 'video');
         $this->RegisterAttributeString('video', '[]');
         $this->RegisterAttributeString('game', '[]');
         $this->RegisterAttributeString('music', '[]');
@@ -1163,21 +1163,18 @@ class HueSyncBox extends IPSModule
             }
         }
         if ($Ident === 'Intensity') {
-            $mode = GetValue($this->GetIDForIdent('Mode'));
-            if($mode == self::Video_Mode || $mode == self::Music_Mode || $mode == self::Game_Mode)
-            {
-                if ($Value == 0) {
-                    $this->Intensity($mode, 'subtle');
-                }
-                if ($Value == 1) {
-                    $this->Intensity($mode, 'moderate');
-                }
-                if ($Value == 2) {
-                    $this->Intensity($mode, 'high');
-                }
-                if ($Value == 3) {
-                    $this->Intensity($mode, 'intense');
-                }
+            $mode = $this->ReadAttributeString('lastSyncMode');
+            if ($Value == 0) {
+                $this->Intensity($mode, 'subtle');
+            }
+            if ($Value == 1) {
+                $this->Intensity($mode, 'moderate');
+            }
+            if ($Value == 2) {
+                $this->Intensity($mode, 'high');
+            }
+            if ($Value == 3) {
+                $this->Intensity($mode, 'intense');
             }
         }
         if ($Ident === 'State') {
@@ -1195,8 +1192,7 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('LEDMode', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'syncActive') {
-            if($Value)
-            {
+            if ($Value) {
                 $mode = GetValue($this->GetIDForIdent('Mode'));
                 if ($mode == 2) {
                     $this->Mode('video');
@@ -1207,8 +1203,7 @@ class HueSyncBox extends IPSModule
                 if ($mode == 4) {
                     $this->Mode('game');
                 }
-            }
-            else{
+            } else {
                 $this->Mode('passthrough');
             }
             $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
