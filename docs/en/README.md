@@ -20,6 +20,14 @@ Module for IP Symcon Version 5.1 or higher. Allows you to send commands to the P
 With the Philips Hue Sync Box it is possible to synchronize Philips Hue lamps with an attached video or audio signal.
 The module allows remote control of the Philips Hue Sync Box from IP-Symcon and the display of the current values of the Philips Hue Sync Box in IP-Symcon.
 
+Setting of:
+- synchronization mode
+- intensity
+- brightness
+- HDMI input
+- switch on / off
+- Advanced settings
+
 ## 2. Requirements
 
  - IPS > 5.1
@@ -38,7 +46,7 @@ Then click on the module store icon in the upper right corner.
 In the search field type
 
 ```
-Hue Sync Box
+Philips Hue Sync Box
 ```  
 
 
@@ -50,19 +58,14 @@ Then select the module and click _Install_
 
 ### b.  Setup in IP-Symcon
 
-In IP-Symcon select _Add instance_ (right click -> Add object -> Instance_) under the category under which you want to add the Philips Hue Sync Box,
-and select _Philips Hue Sync Box_.
-
-Then confirm with _Apply Changes_.
-
-![Apply_Changes](img/apply_changes_en.png?raw=true "Adpply Changes")
-
+A discovery instance for the Philips Hue Sync Box is created automatically. If IP-Symcon is in the same network as the Philips Hue Sync Box, it will be found and can then create one with _Create_
+An instance of the Philips Hue Sync Box will be created in IP-Symcon.
 
 ## 4. Function reference
 
 ### Philips Hue Sync Box:
 
-The EC-PMS2-LAN power strip has 4 ports which can be individually switched on / off.
+The Hue Sync Box can be switched on / off, the input can be changed and the mode and intensity can be set.
 
 ## 5. Configuration:
 
@@ -200,17 +203,35 @@ Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
 
 Parameter _$state_: true | false
 
+**Power on Philips Hue Sync Box**
+```php
+HUESYNC_PowerOn(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Power off Philips Hue Sync Box**
+```php
+HUESYNC_PowerOff(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Power toggle Philips Hue Sync Box**
+```php
+HUESYNC_PowerToggle(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
 **Restart Philips Hue Sync Box**
 ```php
 HUESYNC_RestartSyncBox(integer $InstanceID)
 ``` 
-Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
 
 **Toogle background lighting**
 ```php
 HUESYNC_BackgroundLighting(integer $InstanceID, string $mode, boolean $state)
 ``` 
-Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
 
 Parameter _$mode_: video | game
 
