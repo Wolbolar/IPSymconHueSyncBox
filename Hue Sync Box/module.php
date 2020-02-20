@@ -115,7 +115,6 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeBoolean('LEDMode', false);
 
 
-
         //we will wait until the kernel is ready
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
     }
@@ -302,11 +301,9 @@ class HueSyncBox extends IPSModule
             switch ($vartype) {
                 case VARIABLETYPE_BOOLEAN:
                     $objid = $this->RegisterVariableBoolean($ident, $name, $profile, $position);
-                    if($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode')
-                    {
+                    if ($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode') {
                         $value = boolval($this->ReadAttributeInteger($ident));
-                    }
-                    else{
+                    } else {
                         $value = $this->ReadAttributeBoolean($ident);
                     }
                     $this->SetValue($ident, $value);
@@ -498,10 +495,14 @@ class HueSyncBox extends IPSModule
             }
             $syncActive = $execution->syncActive;
             $this->WriteAttributeBoolean('syncActive', $syncActive);
-            $this->SetValue('syncActive', $syncActive);
+            if ($this->GetIDForIdent('syncActive') > 0) {
+                $this->SetValue('syncActive', $syncActive);
+            }
             $hdmiActive = $execution->hdmiActive;
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
-            $this->SetValue('hdmiActive', $hdmiActive);
+            if ($this->GetIDForIdent('hdmiActive') > 0) {
+                $this->SetValue('hdmiActive', $hdmiActive);
+            }
             $hdmiSource = $execution->hdmiSource;
             $this->WriteAttributeInteger('Input', $this->GetHDMIValue($hdmiSource));
             $this->SetValue('Input', $this->GetHDMIValue($hdmiSource));
@@ -537,6 +538,9 @@ class HueSyncBox extends IPSModule
             $input1      = $hdmi->input1;
             $input1_name = $input1->name;
             $this->WriteAttributeString('input1_name', $input1_name);
+            if ($this->GetIDForIdent('input1_name') > 0) {
+                $this->SetValue('input1_name', $input1_name);
+            }
             $input1_type = $input1->type;
             $this->WriteAttributeString('input1_type', $input1_type);
             $input1_status = $input1->status;
@@ -546,6 +550,9 @@ class HueSyncBox extends IPSModule
             $input2      = $hdmi->input2;
             $input2_name = $input2->name;
             $this->WriteAttributeString('input2_name', $input2_name);
+            if ($this->GetIDForIdent('input2_name') > 0) {
+                $this->SetValue('input2_name', $input2_name);
+            }
             $input2_type = $input2->type;
             $this->WriteAttributeString('input2_type', $input2_type);
             $input2_status = $input2->status;
@@ -555,6 +562,9 @@ class HueSyncBox extends IPSModule
             $input3      = $hdmi->input3;
             $input3_name = $input3->name;
             $this->WriteAttributeString('input3_name', $input3_name);
+            if ($this->GetIDForIdent('input3_name') > 0) {
+                $this->SetValue('input3_name', $input3_name);
+            }
             $input3_type = $input3->type;
             $this->WriteAttributeString('input3_type', $input3_type);
             $input3_status = $input3->status;
@@ -564,6 +574,9 @@ class HueSyncBox extends IPSModule
             $input4      = $hdmi->input4;
             $input4_name = $input4->name;
             $this->WriteAttributeString('input4_name', $input4_name);
+            if ($this->GetIDForIdent('input4_name') > 0) {
+                $this->SetValue('input4_name', $input4_name);
+            }
             $input4_type = $input4->type;
             $this->WriteAttributeString('input4_type', $input4_type);
             $input4_status = $input4->status;
@@ -590,12 +603,21 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Device Behavior', json_encode($behavior), 0);
             $cecPowersave = $behavior->cecPowersave;
             $this->WriteAttributeInteger('cecPowersave', $cecPowersave);
+            if ($this->GetIDForIdent('cecPowersave') > 0) {
+                $this->SetValue('cecPowersave', boolval($cecPowersave));
+            }
             $usbPowersave = $behavior->usbPowersave;
             $this->WriteAttributeInteger('usbPowersave', $usbPowersave);
+            if ($this->GetIDForIdent('usbPowersave') > 0) {
+                $this->SetValue('usbPowersave', boolval($usbPowersave));
+            }
             $hpdInputSwitch = $behavior->hpdInputSwitch;
             $this->WriteAttributeInteger('hpdInputSwitch', $hpdInputSwitch);
             $arcBypassMode = $behavior->arcBypassMode;
             $this->WriteAttributeInteger('arcBypassMode', $arcBypassMode);
+            if ($this->GetIDForIdent('arcBypassMode') > 0) {
+                $this->SetValue('arcBypassMode', boolval($arcBypassMode));
+            }
             $input1_cecInputSwitch = $behavior->input1->cecInputSwitch;
             $this->WriteAttributeInteger('input1_cecInputSwitch', $input1_cecInputSwitch);
             $input1_linkAutoSync = $behavior->input1->linkAutoSync;
@@ -671,6 +693,7 @@ class HueSyncBox extends IPSModule
     }
 
     /** Power on
+     *
      * @return array
      */
     public function PowerOn()
@@ -680,6 +703,7 @@ class HueSyncBox extends IPSModule
     }
 
     /** Power off
+     *
      * @return array
      */
     public function PowerOff()
@@ -694,11 +718,9 @@ class HueSyncBox extends IPSModule
     public function PowerToggle()
     {
         $state = GetValue($this->GetIDForIdent('State'));
-        if($state)
-        {
+        if ($state) {
             $this->PowerOff();
-        }
-        else{
+        } else {
             $this->PowerOn();
         }
     }
@@ -760,7 +782,7 @@ class HueSyncBox extends IPSModule
      */
     public function SetHDMIInput(int $input)
     {
-        return $this->SendExecution(['hdmiSource' => 'input'.$input]);
+        return $this->SendExecution(['hdmiSource' => 'input' . $input]);
     }
 
     /** Check firmware update available
@@ -1338,7 +1360,7 @@ class HueSyncBox extends IPSModule
             [
                 'type'    => 'ExpansionPanel',
                 'caption' => 'Registrations',
-                'visible'  => $list_visible,
+                'visible' => $list_visible,
                 'items'   => [
                     [
                         'type'     => 'List',
