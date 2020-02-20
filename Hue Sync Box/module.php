@@ -14,6 +14,9 @@ class HueSyncBox extends IPSModule
 
     private const APPSECRET = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
     private const APIPATH   = '/api/v1';
+    private const Video_Mode   = 2;
+    private const Music_Mode   = 3;
+    private const Game_Mode   = 4;
 
 
     public function Create()
@@ -699,7 +702,9 @@ class HueSyncBox extends IPSModule
     public function PowerOn()
     {
         $this->SetValue('State', true);
-        return $this->Mode('passthrough');
+        $response = $this->Mode('passthrough');
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Power off
@@ -709,7 +714,9 @@ class HueSyncBox extends IPSModule
     public function PowerOff()
     {
         $this->SetValue('State', false);
-        return $this->Mode('powersave');
+        $response = $this->Mode('powersave');
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Power Toggle
@@ -748,7 +755,9 @@ class HueSyncBox extends IPSModule
             $intensity = $game->intensity;
             $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
         }
-        return $this->SendExecution(['mode' => $mode]);
+        $response = $this->SendExecution(['mode' => $mode]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Change brightness
@@ -759,7 +768,9 @@ class HueSyncBox extends IPSModule
      */
     public function Brightness(int $brightness)
     {
-        return $this->SendExecution(['brightness' => $brightness]);
+        $response = $this->SendExecution(['brightness' => $brightness]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Change intensity
@@ -771,7 +782,9 @@ class HueSyncBox extends IPSModule
      */
     public function Intensity(string $mode, string $intensity)
     {
-        return $this->SendExecution([$mode => ['intensity' => $intensity]]);
+        $response = $this->SendExecution([$mode => ['intensity' => $intensity]]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Set HDMI Input
@@ -782,7 +795,9 @@ class HueSyncBox extends IPSModule
      */
     public function SetHDMIInput(int $input)
     {
-        return $this->SendExecution(['hdmiSource' => 'input' . $input]);
+        $response = $this->SendExecution(['hdmiSource' => 'input' . $input]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Check firmware update available
@@ -893,7 +908,9 @@ class HueSyncBox extends IPSModule
      */
     public function CEC_PowerStateDetection(bool $state)
     {
-        return $this->SendBehavior(['cecPowersave' => intval($state)]);
+        $response = $this->SendBehavior(['cecPowersave' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** USB power state detection
@@ -904,7 +921,9 @@ class HueSyncBox extends IPSModule
      */
     public function USB_PowerStateDetection(bool $state)
     {
-        return $this->SendBehavior(['usbPowersave' => intval($state)]);
+        $response = $this->SendBehavior(['usbPowersave' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** HDMI inactivity power state
@@ -915,7 +934,9 @@ class HueSyncBox extends IPSModule
      */
     public function HDMI_InactivityPowerState(bool $state)
     {
-        return $this->SendBehavior(['inactivePowersave' => intval($state)]);
+        $response = $this->SendBehavior(['inactivePowersave' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** HDMI input detected
@@ -926,7 +947,9 @@ class HueSyncBox extends IPSModule
      */
     public function HDMI_InputDetected(bool $state)
     {
-        return $this->SendBehavior(['hpdInputSwitch' => intval($state)]);
+        $response = $this->SendBehavior(['hpdInputSwitch' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Auto switch inputs
@@ -938,7 +961,9 @@ class HueSyncBox extends IPSModule
      */
     public function AutoSwitchInputs(int $input, bool $state)
     {
-        return $this->SendBehavior(['input' . $input => ['cecInputSwitch' => intval($state)]]);
+        $response = $this->SendBehavior(['input' . $input => ['cecInputSwitch' => intval($state)]]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Auto Sync
@@ -950,7 +975,9 @@ class HueSyncBox extends IPSModule
      */
     public function AutoSync(int $input, bool $state)
     {
-        return $this->SendBehavior(['input' . $input => ['linkAutoSync' => intval($state)]]);
+        $response = $this->SendBehavior(['input' . $input => ['linkAutoSync' => intval($state)]]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Toogle background lighting
@@ -962,7 +989,9 @@ class HueSyncBox extends IPSModule
      */
     public function BackgroundLighting(string $mode, bool $state)
     {
-        return $this->SendExecution([$mode => ['backgroundLighting' => $state]]);
+        $response = $this->SendExecution([$mode => ['backgroundLighting' => $state]]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** ARC Bypass
@@ -971,7 +1000,9 @@ class HueSyncBox extends IPSModule
      */
     public function ARC_Bypass(bool $state)
     {
-        return $this->SendBehavior(['arcBypassMode' => intval($state)]);
+        $response = $this->SendBehavior(['arcBypassMode' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
     }
 
     /** Restart sync box
@@ -1132,18 +1163,21 @@ class HueSyncBox extends IPSModule
             }
         }
         if ($Ident === 'Intensity') {
-            $mode = GetValueFormatted($this->GetIDForIdent('Mode'));
-            if ($Value == 0) {
-                $this->Intensity($mode, 'subtle');
-            }
-            if ($Value == 1) {
-                $this->Intensity($mode, 'moderate');
-            }
-            if ($Value == 2) {
-                $this->Intensity($mode, 'high');
-            }
-            if ($Value == 3) {
-                $this->Intensity($mode, 'intense');
+            $mode = GetValue($this->GetIDForIdent('Mode'));
+            if($mode == self::Video_Mode || $mode == self::Music_Mode || $mode == self::Game_Mode)
+            {
+                if ($Value == 0) {
+                    $this->Intensity($mode, 'subtle');
+                }
+                if ($Value == 1) {
+                    $this->Intensity($mode, 'moderate');
+                }
+                if ($Value == 2) {
+                    $this->Intensity($mode, 'high');
+                }
+                if ($Value == 3) {
+                    $this->Intensity($mode, 'intense');
+                }
             }
         }
         if ($Ident === 'State') {
@@ -1156,10 +1190,27 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('State', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'LEDMode') {
-            $this->Brightness($Value);
+            // todo
+            //$this->Brightness($Value);
+            $this->SendDebug('LEDMode', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'syncActive') {
-            // todo
+            if($Value)
+            {
+                $mode = GetValue($this->GetIDForIdent('Mode'));
+                if ($mode == 2) {
+                    $this->Mode('video');
+                }
+                if ($mode == 3) {
+                    $this->Mode('music');
+                }
+                if ($mode == 4) {
+                    $this->Mode('game');
+                }
+            }
+            else{
+                $this->Mode('passthrough');
+            }
             $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'hdmiActive') {
