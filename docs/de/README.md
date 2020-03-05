@@ -37,7 +37,12 @@ Auslesen der aktuellen Einstellungen der Hue Sync Box
 
 ## 3. Installation
 
-### a. Laden des Moduls
+### a. Richten Sie die Sync Box mit der offiziellen Hue Sync iOS / Android App ein
+
+Zunächst ist die Philps Hue Sync Box mit der offiziellen Hue Sync iOS / Android App einzurichten.
+Nach der Ersteinrichtung ist darauf zu achten dass ein Upgrade auf die aktuelle Firmware Version durchgeführt wird.
+
+### b. Laden des Moduls
 
 Die Webconsole von IP-Symcon mit _http://{IP-Symcon IP}:3777/console/_ öffnen. 
 
@@ -62,12 +67,30 @@ und schließend das Modul auswählen und auf _Installieren_
 
 drücken.
 
-### b. Einrichtung in IP-Symcon
+### c. Einrichtung in IP-Symcon
 
 Es wird automatisch eine Discovery Instanz für die Philips Hue Sync Box erstellt. Sollte sich IP-Symcon im gleichem Netzwerk befinden wie die Philips Hue Sync Box wird diese gefunden und kann dann mit _Erstellen_ eine
 Instanz der Philips Hue Sync Box in IP-Symcon erzeugt werden. 
 
+An der Hue Sync Box den Button gedrückt halten bis die LED grün leuchtet und zeitgleich in der Instanz unten auf _Registrieren_ drücken. Es sollte ein Token bezogen werden.
+
+In der Instanz kann man auswählen das zusätzlich Skripte angelegt werden sollen
+
+![huescript](img/hue_sync_scripts.png?raw=true "Webfront")
+
+daraufhin werden zusätzlich Skripte für wichtige Funktionen automatisch erzeugt.
+
+Unter _Eigenschaften_ können optional noch weitere Variablen ausgewählt werden, die im Webfront angezeigt werden sollen.
+
 ## 4. Funktionsreferenz
+
+### Webfront Ansicht
+
+![webfront](img/hue_sync_webfront.png?raw=true "Webfront")
+
+### mögliche Ansicht in NEO
+
+![viewneo](img/hue_sync_box_neo.png?raw=true "View NEO")
 
 ### Hue Sync Box schalten
 

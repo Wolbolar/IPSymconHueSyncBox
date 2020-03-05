@@ -35,7 +35,12 @@ Setting of:
 
 ## 3. Installation
 
-### a. Loading the module
+### a.  Set up Sync Box with the official Hue Sync iOS/Android app
+
+First, the Philps Hue Sync Box must be set up with the official Hue Sync iOS / Android app.
+After the initial setup, make sure that you upgrade to the current firmware version.
+
+### b. Loading the module
 
 Open the IP Console's web console with _http://{IP-Symcon IP}:3777/console/_.
 
@@ -56,12 +61,30 @@ Then select the module and click _Install_
 
 ![Store](img/install_en.png?raw=true "install")
 
-### b.  Setup in IP-Symcon
+### c.  Setup in IP-Symcon
 
 A discovery instance for the Philips Hue Sync Box is created automatically. If IP-Symcon is in the same network as the Philips Hue Sync Box, it will be found and can then create one with _Create_
 An instance of the Philips Hue Sync Box will be created in IP-Symcon.
 
+Press and hold the button on the Hue Sync Box until the LED lights up green and at the same time press _Registrate_ in the instance below. A token should be obtained.
+
+In the instance you can choose that additional scripts should be created
+
+![huescript](img/hue_sync_scripts.png?raw=true "Webfront")
+
+then scripts for important functions are automatically generated.
+
+Additional variables can optionally be selected under _Properties_, which should be displayed on the web front.
+
 ## 4. Function reference
+
+### Webfront View
+
+![webfront](img/hue_sync_webfront.png?raw=true "Webfront")
+
+### possible view in NEO
+
+![viewneo](img/hue_sync_box_neo.png?raw=true "View NEO")
 
 ### Philips Hue Sync Box:
 
