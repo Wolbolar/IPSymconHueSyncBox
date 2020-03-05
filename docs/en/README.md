@@ -268,6 +268,57 @@ Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
 
 Parameter _$state_: true | false
 
+**LED Mode**
+```php
+HUESYNC_LEDMode(integer $InstanceID, int $mode)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+Parameter _$mode_: 0 = off | 1 = regular | 2 = dimmed
+
+**Previous SyncMode**
+```php
+HUESYNC_PreviousSyncMode(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Next SyncMode**
+```php
+HUESYNC_NextSyncMode(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Previous HDMI Source**
+```php
+HUESYNC_PreviousHDMISource(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Next SyncMode**
+```php
+HUESYNC_NextHDMISource(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Previous Intensity**
+```php
+HUESYNC_PreviousIntensity(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+**Next Intensity**
+```php
+HUESYNC_NextIntensity(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+**Palette**
+```php
+HUESYNC_Palette(integer $InstanceID, string $palette)
+``` 
+Parameter _$InstanceID_: ObjectID of the Philips Hue Sync Box
+
+Parameter _$palette_: happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+
 ###  b. GUIDs and data exchange:
 
 #### Philips Hue Sync Box:

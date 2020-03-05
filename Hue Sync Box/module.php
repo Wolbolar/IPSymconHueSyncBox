@@ -34,94 +34,107 @@ class HueSyncBox extends IPSModule
         $this->RegisterPropertyString('instance_name', 'Symcon');
         $this->RegisterAttributeString('AccessToken', '');
         $this->RegisterAttributeInteger('registrationId', 0);
-        $this->RegisterAttributeString('name', '');
-        $this->RegisterAttributeString('deviceType', '');
-        $this->RegisterAttributeString('uniqueId', '');
-        $this->RegisterAttributeString('ipAddress', '');
-        $this->RegisterAttributeInteger('apiLevel', 0);
-        $this->RegisterAttributeString('firmwareVersion', '');
-        $this->RegisterAttributeInteger('buildNumber', 0);
-        $this->RegisterAttributeString('lastCheckedUpdate', '');
-        $this->RegisterAttributeString('updatableBuildNumber', '');
-        $this->RegisterAttributeString('updatableFirmwareVersion', '');
-        $this->RegisterAttributeBoolean('autoUpdateEnabled', false);
-        $this->RegisterAttributeInteger('autoUpdateTime', 0);
-        $this->RegisterAttributeBoolean('ledMode', false);
-        $this->RegisterAttributeString('wifiState', '');
+        $this->RegisterAttributeString('name', ''); // Friendly name of the device
+        $this->RegisterAttributeString('deviceType', ''); // Device Type identifier – currently fixed to HSB1
+        $this->RegisterAttributeString('uniqueId', ''); // Capitalized hex string of the 6 byte / 12 characters device id without delimiters. Used as unique id on label, certificate common name, hostname etc.
+        $this->RegisterAttributeString('ipAddress', ''); // Local IP address of the device
+        $this->RegisterAttributeInteger('apiLevel', 0); // Increased between firmware versions when api changes. Only apiLevel >= 4 is supported.
+        $this->RegisterAttributeString('firmwareVersion', ''); // User readable version of the device firmware, starting with decimal major .minor .maintenance format e.g. “1.12.3”
+        $this->RegisterAttributeInteger('buildNumber', 0); // Build number of the firmware. Unique for every build with newer builds guaranteed a higher number than older.
+        $this->RegisterAttributeString('lastCheckedUpdate', ''); // UTC time when last check for update was performed.
+        $this->RegisterAttributeString('updatableBuildNumber', ''); // Build number that is available to update to. Item is set to null when there is no update available.
+        $this->RegisterAttributeString('updatableFirmwareVersion', ''); // User readable version of the firmware the device can upgrade to. Item is set to null when there is no update available.
+        $this->RegisterAttributeBoolean('autoUpdateEnabled', false); // Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
+        $this->RegisterAttributeInteger('autoUpdateTime', 0); // UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
+        $this->RegisterAttributeInteger('ledMode', 1); // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+        $this->RegisterAttributeString('wifiState', 'uninitialized'); // uninitialized, disconnected, lan, wan
         $this->RegisterAttributeBoolean('termsAgreed', true);
-        $this->RegisterAttributeString('device_action', '');
-        $this->RegisterAttributeString('hue_bridgeUniqueId', '');
-        $this->RegisterAttributeString('hue_bridgeIpAddress', '');
+        $this->RegisterAttributeString('device_action', ''); // none, doSoftwareRestart,  doFirmwareUpdate
+        $this->RegisterAttributeInteger('maxIrCodes', 16); // The total number of IR codes configurable
+        $this->RegisterAttributeInteger('maxPresets', 16); // The total number of Presets configurable
+        $this->RegisterAttributeString('hue_bridgeUniqueId', ''); // 16 character ascii hex string bridge identifier
+        $this->RegisterAttributeString('hue_bridgeIpAddress', ''); // Readable, dot IPv4 address of the paired bridge EG “192.168.1.50”
         $this->RegisterAttributeString('hue_groupId', '');
-        $this->RegisterAttributeString('hue_groups', '[]');
+        $this->RegisterAttributeString('hue_groups', '[]'); // All available entertainment areas on the current bridge. When this object is not available, it means the bridge groups have not been retrieved yet. When the object is empty, it means there are no entertainment areas on the bridge. When the bridge connection is lost, the last known values are remembered. Determining whether values may be outdated can be done based on connectionState.
         $this->RegisterAttributeString('hue_connectionState', '');
-        $this->RegisterAttributeBoolean('syncActive', false);
-        $this->RegisterAttributeBoolean('hdmiActive', false);
-        $this->RegisterAttributeString('lastSyncMode', 'video');
+        $this->RegisterAttributeBoolean('syncActive', false); // Reports false in case of powersave or passthrough mode, and true in case of video, game, music, or ambient mode. When changed from false to true, it will start syncing in last used mode for current source. Requires hue /connectionState to be connected. When changed from true to false, will set passthrough mode.
+        $this->RegisterAttributeBoolean('hdmiActive', false); // Reports false in case of powersave mode, and true in case of passthrough, video, game, music or ambient mode. When changed from false to true, it will set passthrough mode. When changed from true to false, will set powersave mode.
+        $this->RegisterAttributeString('lastSyncMode', 'video'); // video, game, music, ambient
         $this->RegisterAttributeString('video', '[]');
+        $this->RegisterAttributeString('video_intensity', ''); // subtle, moderate, high, intense
+        $this->RegisterAttributeBoolean('backlight_video', false);
+        $this->RegisterAttributeBoolean('backlight_video_enabled', false);
         $this->RegisterAttributeString('game', '[]');
+        $this->RegisterAttributeString('game_intensity', ''); // subtle, moderate, high, intense
+        $this->RegisterAttributeBoolean('backlight_game', false);
+        $this->RegisterAttributeBoolean('backlight_game_enabled', false);
         $this->RegisterAttributeString('music', '[]');
-        $this->RegisterAttributeString('ambient', '[]');
-        $this->RegisterAttributeString('input1_name', '');
+        $this->RegisterAttributeString('music_intensity', ''); // subtle, moderate, high, intense
+        $this->RegisterAttributeString('music_palette', ''); // happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+        $this->RegisterAttributeString('preset', '');
+        $this->RegisterAttributeString('ambient', '[]'); // Deprecated, will be removed in a future release
+        $this->RegisterAttributeString('input1_name', ''); // Friendly name, not empty
         $this->RegisterAttributeBoolean('input1_name_enabled', false);
-        $this->RegisterAttributeString('input1_type', '');
-        $this->RegisterAttributeString('input1_status', '');
-        $this->RegisterAttributeString('input1_lastSyncMode', '');
-        $this->RegisterAttributeString('input2_name', '');
+        $this->RegisterAttributeString('input1_type', ''); // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
+        $this->RegisterAttributeString('input1_status', ''); // unplugged, plugged, linked, unknown
+        $this->RegisterAttributeString('input1_lastSyncMode', ''); // video, game, music
+        $this->RegisterAttributeString('input2_name', ''); // Friendly name, not empty
         $this->RegisterAttributeBoolean('input2_name_enabled', false);
-        $this->RegisterAttributeString('input2_type', '');
-        $this->RegisterAttributeString('input2_status', '');
-        $this->RegisterAttributeString('input2_lastSyncMode', '');
-        $this->RegisterAttributeString('input3_name', '');
+        $this->RegisterAttributeString('input2_type', ''); // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
+        $this->RegisterAttributeString('input2_status', ''); // unplugged, plugged, linked, unknown
+        $this->RegisterAttributeString('input2_lastSyncMode', ''); // video, game, music
+        $this->RegisterAttributeString('input3_name', ''); // Friendly name, not empty
         $this->RegisterAttributeBoolean('input3_name_enabled', false);
-        $this->RegisterAttributeString('input3_type', '');
-        $this->RegisterAttributeString('input3_status', '');
-        $this->RegisterAttributeString('input3_lastSyncMode', '');
-        $this->RegisterAttributeString('input4_name', '');
+        $this->RegisterAttributeString('input3_type', ''); // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
+        $this->RegisterAttributeString('input3_status', ''); // unplugged, plugged, linked, unknown
+        $this->RegisterAttributeString('input3_lastSyncMode', ''); // video, game, music
+        $this->RegisterAttributeString('input4_name', ''); // Friendly name, not empty
         $this->RegisterAttributeBoolean('input4_name_enabled', false);
-        $this->RegisterAttributeString('input4_type', '');
-        $this->RegisterAttributeString('input4_status', '');
-        $this->RegisterAttributeString('input4_lastSyncMode', '');
+        $this->RegisterAttributeString('input4_type', ''); // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
+        $this->RegisterAttributeString('input4_status', ''); // unplugged, plugged, linked, unknown
+        $this->RegisterAttributeString('input4_lastSyncMode', ''); // video, game, music
         $this->RegisterAttributeString('output_name', '');
         $this->RegisterAttributeString('output_type', '');
-        $this->RegisterAttributeString('output_status', '');
+        $this->RegisterAttributeString('output_status', ''); // unplugged, plugged, linked, unknown
         $this->RegisterAttributeString('output_lastSyncMode', '');
-        $this->RegisterAttributeString('contentSpecs', '');
-        $this->RegisterAttributeBoolean('videoSyncSupported', true);
-        $this->RegisterAttributeBoolean('audioSyncSupported', true);
-        $this->RegisterAttributeInteger('inactivePowersave', 20);
-        $this->RegisterAttributeInteger('cecPowersave', 1);
+        $this->RegisterAttributeString('contentSpecs', ''); // <horizontal pixels> x <vertical pixels> @ <framerate fpks> – <HDR>
+        $this->RegisterAttributeBoolean('videoSyncSupported', true); // Current content specs supported for video sync (video/game mode)
+        $this->RegisterAttributeBoolean('audioSyncSupported', true); // Current content specs supported for audio sync (music mode)
+        $this->RegisterAttributeInteger('inactivePowersave', 20); // Device automatically goes to powersave after this many minutes of being in passthrough mode with no link on any source or no link on output. 0 is disabled, max is 10000. Default: 20.
+        $this->RegisterAttributeBoolean('inactivePowersave_enabled', false);
+        $this->RegisterAttributeInteger('cecPowersave', 1); // Device goes to powersave when TV sends CEC OFF. Default: 1. Disabled 0, Enabled 1.
         $this->RegisterAttributeBoolean('cecPowersave_enabled', false);
-        $this->RegisterAttributeInteger('usbPowersave', 1);
+        $this->RegisterAttributeInteger('usbPowersave', 1); // Device goes to powersave when USB power transitions from 5V to 0V. Default: 1. Disabled 0, Enabled 1.
         $this->RegisterAttributeBoolean('usbPowersave_enabled', false);
         $this->RegisterAttributeInteger('hpdInputSwitch', 1);
         $this->RegisterAttributeInteger('arcBypassMode', 0);
         $this->RegisterAttributeBoolean('arcBypassMode_enabled', false);
-        $this->RegisterAttributeInteger('input1_cecInputSwitch', 1);
-        $this->RegisterAttributeInteger('input1_linkAutoSync', 0);
-        $this->RegisterAttributeInteger('input2_cecInputSwitch', 1);
-        $this->RegisterAttributeInteger('input2_linkAutoSync', 0);
-        $this->RegisterAttributeInteger('input3_cecInputSwitch', 1);
-        $this->RegisterAttributeInteger('input3_linkAutoSync', 0);
-        $this->RegisterAttributeInteger('input4_cecInputSwitch', 1);
-        $this->RegisterAttributeInteger('input4_linkAutoSync', 0);
-        $this->RegisterAttributeBoolean('backlight_video', false);
-        $this->RegisterAttributeBoolean('backlight_video_enabled', false);
-        $this->RegisterAttributeBoolean('backlight_game', false);
-        $this->RegisterAttributeBoolean('backlight_game_enabled', false);
+        $this->RegisterAttributeInteger('forceDoviNative', 0); // When the TV advertises Dolby Vision force to use native native mode. Disabled 0, Enabled 1.
+        $this->RegisterAttributeBoolean('forceDoviNative_enabled', false);
+        $this->RegisterAttributeInteger('input1_cecInputSwitch', 1); // Automatically switch input when this source sends CEC active. Default: 1. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input1_linkAutoSync', 0); // Automatically set syncActive true when this source and output are linked. Default: 0. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input2_cecInputSwitch', 1); // Automatically switch input when this source sends CEC active. Default: 1. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input2_linkAutoSync', 0); // Automatically set syncActive true when this source and output are linked. Default: 0. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input3_cecInputSwitch', 1); // Automatically switch input when this source sends CEC active. Default: 1. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input3_linkAutoSync', 0); // Automatically set syncActive true when this source and output are linked. Default: 0. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input4_cecInputSwitch', 1); // Automatically switch input when this source sends CEC active. Default: 1. Disabled 0, Enabled 1.
+        $this->RegisterAttributeInteger('input4_linkAutoSync', 0); // Automatically set syncActive true when this source and output are linked. Default: 0. Disabled 0, Enabled 1.
+        $this->RegisterAttributeBoolean('scanning', false); // Scanning mode causes the last-received IR code to be saved (instead of processing), displayed as the ‘code’ attribute. Scanning automatically deactivates after 20 seconds but can continually be enabled again without gaps. After scanning an IR code, scanning will immediately be disabled.
+        $this->RegisterAttributeString('code', ''); // The last scanned code received while in scanning mode. Value is null if not scanned.
+        $this->RegisterAttributeString('codes', '[]');
         $this->RegisterAttributeString('registrations', '[]');
-        $this->RegisterAttributeInteger('Brightness', 0);
+        $this->RegisterAttributeInteger('Brightness', 0); // 0 – 200 (100 = no brightness reduction/boost compared to input, 0 = max reduction, 200 = max boost)
+        $this->RegisterAttributeString('hueTarget', ''); // groups/<groupId> (currently selected entertainment area)
         $this->RegisterAttributeInteger('Input', 0);
         $this->RegisterAttributeInteger('Mode', 0);
         $this->RegisterAttributeInteger('Intensity', 0);
         $this->RegisterAttributeBoolean('State', false);
-        $this->RegisterAttributeBoolean('LEDMode', false);
         $this->RegisterPropertyInteger('ImportCategoryID', 0);
         $this->RegisterPropertyBoolean('HueSyncScript', false);
         $this->RegisterAttributeBoolean('AlexaVoiceControl', false);
         $this->RegisterAttributeBoolean('GoogleVoiceControl', false);
         $this->RegisterAttributeBoolean('SiriVoiceControl', false);
-
+        $this->RegisterAttributeString('presets', '[]');
 
         //we will wait until the kernel is ready
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
@@ -244,14 +257,31 @@ class HueSyncBox extends IPSModule
         $this->SetupVariable(
             'Intensity', $this->Translate('Intensity'), 'Hue.Sync.Intensity', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
+        $palette_ass = [
+            [0, $this->Translate("happy energetic"), "", -1],
+            [1, $this->Translate("happy calm"), "", -1],
+            [2, $this->Translate("melancholic calm"), "", -1],
+            [3, $this->Translate("melancholic energetic"), "", -1],
+            [4, $this->Translate("neutral"), "", -1]];
+        $this->RegisterProfileAssociation("Hue.Sync.Palette", "Execute", "", "", 0, 4, 0, 0, VARIABLETYPE_INTEGER, $palette_ass);
+        $this->SetupVariable(
+            'music_palette', $this->Translate('Palette'), 'Hue.Sync.Palette', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
+        );
+
         $this->SetupVariable(
             'firmwareVersion', $this->Translate('Firmware'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, true
         );
         $this->SetupVariable(
             'State', $this->Translate('State'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
+        // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+        $ledmode_ass = [
+            [0, $this->Translate("off"), "", -1],
+            [1, $this->Translate("regular"), "", -1],
+            [2, $this->Translate("dimmed"), "", -1]];
+        $this->RegisterProfileAssociation("Hue.Sync.LED_Mode", "Execute", "", "", 0, 2, 0, 0, VARIABLETYPE_INTEGER, $ledmode_ass);
         $this->SetupVariable(
-            'LEDMode', $this->Translate('LED Mode'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
+            'ledMode', $this->Translate('LED Mode'), 'Hue.Sync.LED_Mode', $this->_getPosition(), VARIABLETYPE_INTEGER, true, true
         );
         $this->SetupVariable(
             'syncActive', $this->Translate('Sync Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
@@ -270,6 +300,10 @@ class HueSyncBox extends IPSModule
         );
         $this->SetupVariable(
             'input4_name', $this->Translate('HDMI Input 4 Name'), '', $this->_getPosition(), VARIABLETYPE_STRING, false, false
+        );
+        $this->RegisterProfile('Hue.Sync.Powersave', 'Intensity', '', ' min', 0, 10000, 1, 0, VARIABLETYPE_INTEGER);
+        $this->SetupVariable(
+            'inactivePowersave', $this->Translate('HDMI Inactivity Power State'), 'Hue.Sync.Powersave', $this->_getPosition(), VARIABLETYPE_INTEGER, true, false
         );
         $this->SetupVariable(
             'cecPowersave', $this->Translate('CEC Powersave'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
@@ -323,7 +357,11 @@ class HueSyncBox extends IPSModule
                     break;
                 case VARIABLETYPE_INTEGER:
                     $objid = $this->RegisterVariableInteger($ident, $name, $profile, $position);
-                    $value = $this->ReadAttributeInteger($ident);
+                    if ($ident == 'music_palette') {
+                        $value = $this->GetPaletteValue($this->ReadAttributeString($ident));
+                    } else {
+                        $value = $this->ReadAttributeInteger($ident);
+                    }
                     $this->SetValue($ident, $value);
                     break;
                 case VARIABLETYPE_FLOAT:
@@ -353,6 +391,9 @@ class HueSyncBox extends IPSModule
         $this->SetupVariables();
     }
 
+    /** video, game, music, ambient
+     * @return string
+     */
     public function GetLastSyncMode()
     {
         $lastSyncMode = $this->ReadAttributeString('lastSyncMode');
@@ -373,35 +414,35 @@ class HueSyncBox extends IPSModule
         $device_info = $this->SendDevice();
 
         $name = $device_info->name;
-        $this->WriteAttributeString('name', $name);
+        $this->WriteAttributeString('name', $name); // Friendly name of the device
         $deviceType = $device_info->deviceType;
-        $this->WriteAttributeString('deviceType', $deviceType);
+        $this->WriteAttributeString('deviceType', $deviceType); // Device Type identifier – currently fixed to HSB1
         $uniqueId = $device_info->uniqueId;
-        $this->WriteAttributeString('uniqueId', $uniqueId);
+        $this->WriteAttributeString('uniqueId', $uniqueId); // Capitalized hex string of the 6 byte / 12 characters device id without delimiters. Used as unique id on label, certificate common name, hostname etc.
         $ip = $device_info->ipAddress;
-        $this->WriteAttributeString('ipAddress', $ip);
+        $this->WriteAttributeString('ipAddress', $ip); // Local IP address of the device
         $apiLevel = $device_info->apiLevel;
-        $this->WriteAttributeInteger('apiLevel', $apiLevel);
+        $this->WriteAttributeInteger('apiLevel', $apiLevel); // Increased between firmware versions when api changes. Only apiLevel >= 4 is supported.
         $firmwareVersion = $device_info->firmwareVersion;
-        $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
+        $this->WriteAttributeString('firmwareVersion', $firmwareVersion); // User readable version of the device firmware, starting with decimal major .minor .maintenance format e.g. “1.12.3”
         $this->SetValue('firmwareVersion', $firmwareVersion);
         $buildNumber = $device_info->buildNumber;
-        $this->WriteAttributeInteger('buildNumber', $buildNumber);
+        $this->WriteAttributeInteger('buildNumber', $buildNumber); // Build number of the firmware. Unique for every build with newer builds guaranteed a higher number than older.
         $lastCheckedUpdate = $device_info->lastCheckedUpdate;
-        $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate);
+        $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate); // UTC time when last check for update was performed.
         $updatableBuildNumber = $device_info->updatableBuildNumber;
-        $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber);
+        $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber); // Build number that is available to update to. Item is set to null when there is no update available.
         $updatableFirmwareVersion = $device_info->updatableFirmwareVersion;
-        $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion);
-        $autoUpdateEnabled = $device_info->update->autoUpdateEnabled;
-        $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled);
-        $autoUpdateTime = $device_info->update->autoUpdateTime;
-        $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime);
-        $ledMode = boolval($device_info->ledMode);
-        $this->WriteAttributeBoolean('ledMode', $ledMode);
-        $this->SetValue('LEDMode', $ledMode);
+        $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion); // User readable version of the firmware the device can upgrade to. Item is set to null when there is no update available.
+        $autoUpdateEnabled = $device_info->update->autoUpdateEnabled; // update Root object for automatic update configuration
+        $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled); // Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
+        $autoUpdateTime = $device_info->update->autoUpdateTime; // update Root object for automatic update configuration
+        $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime); // UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
+        $ledMode = $device_info->ledMode;
+        $this->WriteAttributeInteger('ledMode', $ledMode); // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+        $this->SetValue('ledMode', $ledMode);
         $wifiState = $device_info->wifiState;
-        $this->WriteAttributeString('wifiState', $wifiState);
+        $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
         $termsAgreed = $device_info->lastCheckedUpdate;
         $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
         return $device_info;
@@ -455,56 +496,62 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Device Info', json_encode($device_info), 0);
 
             $name = $device_info->name;
-            $this->WriteAttributeString('name', $name);
+            $this->WriteAttributeString('name', $name); // Friendly name of the device
             $deviceType = $device_info->deviceType;
-            $this->WriteAttributeString('deviceType', $deviceType);
+            $this->WriteAttributeString('deviceType', $deviceType); // Device Type identifier – currently fixed to HSB1
             $uniqueId = $device_info->uniqueId;
-            $this->WriteAttributeString('uniqueId', $uniqueId);
+            $this->WriteAttributeString('uniqueId', $uniqueId); // Capitalized hex string of the 6 byte / 12 characters device id without delimiters. Used as unique id on label, certificate common name, hostname etc.
             $ip = $device_info->ipAddress;
-            $this->WriteAttributeString('ipAddress', $ip);
+            $this->WriteAttributeString('ipAddress', $ip); // Local IP address of the device
             $apiLevel = $device_info->apiLevel;
-            $this->WriteAttributeInteger('apiLevel', $apiLevel);
+            $this->WriteAttributeInteger('apiLevel', $apiLevel); // Increased between firmware versions when api changes. Only apiLevel >= 4 is supported.
             $firmwareVersion = $device_info->firmwareVersion;
-            $this->WriteAttributeString('firmwareVersion', $firmwareVersion);
+            $this->WriteAttributeString('firmwareVersion', $firmwareVersion); // User readable version of the device firmware, starting with decimal major .minor .maintenance format e.g. “1.12.3”
             $this->SetValue('firmwareVersion', $firmwareVersion);
             $buildNumber = $device_info->buildNumber;
-            $this->WriteAttributeInteger('buildNumber', $buildNumber);
+            $this->WriteAttributeInteger('buildNumber', $buildNumber); // Build number of the firmware. Unique for every build with newer builds guaranteed a higher number than older.
             $lastCheckedUpdate = $device_info->lastCheckedUpdate;
-            $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate);
+            $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate); // UTC time when last check for update was performed.
             $updatableBuildNumber = $device_info->updatableBuildNumber;
-            $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber);
+            $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber); // Build number that is available to update to. Item is set to null when there is no update available.
             $updatableFirmwareVersion = $device_info->updatableFirmwareVersion;
-            $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion);
-            $autoUpdateEnabled = $device_info->update->autoUpdateEnabled;
-            $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled);
-            $autoUpdateTime = $device_info->update->autoUpdateTime;
-            $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime);
-            $ledMode = boolval($device_info->ledMode);
-            $this->WriteAttributeBoolean('ledMode', $ledMode);
-            $this->SetValue('LEDMode', $ledMode);
+            $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion); // User readable version of the firmware the device can upgrade to. Item is set to null when there is no update available.
+            $autoUpdateEnabled = $device_info->update->autoUpdateEnabled; // update Root object for automatic update configuration
+            $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled); // Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
+            $autoUpdateTime = $device_info->update->autoUpdateTime; // update Root object for automatic update configuration
+            $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime); // UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
+            $ledMode = $device_info->ledMode;
+            $this->WriteAttributeInteger('ledMode', $ledMode); // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+            $this->SetValue('ledMode', $ledMode);
             $wifiState = $device_info->wifiState;
-            $this->WriteAttributeString('wifiState', $wifiState);
+            $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
             $termsAgreed = $device_info->lastCheckedUpdate;
             $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
             $device_action = $device_info->action;
-            $this->WriteAttributeString('device_action', $device_action);
+            $this->WriteAttributeString('device_action', $device_action); // none, doSoftwareRestart,  doFirmwareUpdate
+            $capabilities = $device_info->capabilities; // capabilities Root object for capabilities resource
+            $maxIrCodes = $capabilities->maxIrCodes; // The total number of IR codes configurable
+            $this->WriteAttributeInteger('maxIrCodes', $maxIrCodes); // The total number of IR codes configurable
+            $maxPresets = $capabilities->maxPresets; // The total number of Presets configurable
+            $this->WriteAttributeInteger('maxPresets', $maxPresets); // The total number of Presets configurable
 
-            $hue = $data->hue;
+
+            $hue = $data->hue; // Root object for hue resource
             $this->SendDebug('Hue Info', json_encode($hue), 0);
-            $bridgeUniqueId = $hue->bridgeUniqueId;
+            $bridgeUniqueId = $hue->bridgeUniqueId; // 16 character ascii hex string bridge identifier
             $this->WriteAttributeString('hue_bridgeUniqueId', $bridgeUniqueId);
-            $bridgeIpAddress = $hue->bridgeIpAddress;
+            $bridgeIpAddress = $hue->bridgeIpAddress; // Readable, dot IPv4 address of the paired bridge EG “192.168.1.50”
             $this->WriteAttributeString('hue_bridgeIpAddress', $bridgeIpAddress);
             $groupId = $hue->groupId;
             $this->WriteAttributeString('hue_groupId', $groupId);
-            $groups = $hue->groups;
+            $groups = $hue->groups; // All available entertainment areas on the current bridge. When this object is not available, it means the bridge groups have not been retrieved yet. When the object is empty, it means there are no entertainment areas on the bridge. When the bridge connection is lost, the last known values are remembered. Determining whether values may be outdated can be done based on connectionState.
             $this->WriteAttributeString('hue_groups', json_encode($groups));
             $connectionState = $hue->connectionState;
             $this->WriteAttributeString('hue_connectionState', $connectionState);
 
-            $execution = $data->execution;
+            $execution = $data->execution; // Root object for execution resource
             $this->SendDebug('Execution Info', json_encode($execution), 0);
-            $mode = $execution->mode;
+            $mode = $execution->mode; // powersave, passthrough, video, game, music, ambient (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
             $this->SetValue('Mode', $this->GetModeValue($mode));
             $this->WriteAttributeInteger('Mode', $this->GetModeValue($mode));
             if ($mode == 'passthrough' || $mode == 'video' || $mode == 'music' || $mode == 'game') {
@@ -512,32 +559,52 @@ class HueSyncBox extends IPSModule
             } elseif ($mode == 'powersave') {
                 $this->SetValue('State', false);
             }
-            $syncActive = $execution->syncActive;
+            $syncActive = $execution->syncActive; // Reports false in case of powersave or passthrough mode, and true in case of video, game, music, or ambient mode. When changed from false to true, it will start syncing in last used mode for current source. Requires hue /connectionState to be connected. When changed from true to false, will set passthrough mode.
             $this->WriteAttributeBoolean('syncActive', $syncActive);
             if ($this->GetIDForIdent('syncActive') > 0) {
                 $this->SetValue('syncActive', $syncActive);
             }
-            $hdmiActive = $execution->hdmiActive;
+            $hdmiActive = $execution->hdmiActive; // Reports false in case of powersave mode, and true in case of passthrough, video, game, music or ambient mode. When changed from false to true, it will set passthrough mode. When changed from true to false, will set powersave mode.
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
             if ($this->GetIDForIdent('hdmiActive') > 0) {
                 $this->SetValue('hdmiActive', $hdmiActive);
             }
-            $hdmiSource = $execution->hdmiSource;
+            $hdmiSource = $execution->hdmiSource; // input1, input2, input3, input4 (currently selected hdmi input)
             $this->WriteAttributeInteger('Input', $this->GetHDMIValue($hdmiSource));
             $this->SetValue('Input', $this->GetHDMIValue($hdmiSource));
-            $brightness = $execution->brightness;
+            $hueTarget = $execution->hueTarget;  // groups/<groupId> (currently selected entertainment area)
+            $this->WriteAttributeString('hueTarget', $hueTarget);
+
+            $brightness = $execution->brightness; // // 0 – 200 (100 = no brightness reduction/boost compared to input, 0 = max reduction, 200 = max boost)
             $this->WriteAttributeInteger('Brightness', $brightness);
             $this->SetValue('Brightness', $brightness);
-            $lastSyncMode = $execution->lastSyncMode;
+            $lastSyncMode = $execution->lastSyncMode; // video, game, music, ambient
             $this->WriteAttributeString('lastSyncMode', $lastSyncMode);
-            $video = $execution->video;
+            $video = $execution->video; // Root for video subresource
             $this->WriteAttributeString('video', json_encode($video));
-            $game = $execution->game;
+            $video_intensity = $video->intensity;
+            $this->WriteAttributeString('video_intensity', $video_intensity); // subtle, moderate, high, intense
+            $backlight_video = $video->backgroundLighting;
+            $this->WriteAttributeBoolean('backlight_video', $backlight_video);
+            $game = $execution->game; // Root for game subresource
             $this->WriteAttributeString('game', json_encode($game));
-            $music = $execution->music;
+            $game_intensity = $game->intensity;
+            $this->WriteAttributeString('game_intensity', $game_intensity); // subtle, moderate, high, intense
+            $backlight_game = $game->backgroundLighting;
+            $this->WriteAttributeBoolean('backlight_game', $backlight_game);
+            $music = $execution->music; // Root for music subresource
             $this->WriteAttributeString('music', json_encode($music));
+            $music_intensity = $music->intensity;
+            $this->WriteAttributeString('music_intensity', $music_intensity); // subtle, moderate, high, intense
+            $music_palette = $music->palette; // happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+            $this->WriteAttributeString('music_palette', $music_palette);
+            $this->SetValue('music_palette', $this->GetPaletteValue($music_palette));
+            $preset = $execution->preset; // Preset identifier, that will be executed
+            $this->WriteAttributeString('preset', $preset);
             $ambient = $execution->ambient;
             $this->WriteAttributeString('ambient', json_encode($ambient));
+
+
             if ($lastSyncMode == 'video') {
                 $intensity = $video->intensity;
                 $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
@@ -551,52 +618,52 @@ class HueSyncBox extends IPSModule
                 $this->SetValue('Intensity', $this->GetIntensityValue($intensity));
             }
 
-            $hdmi = $data->hdmi;
+            $hdmi = $data->hdmi; // Root object for hdmi resource
             $this->SendDebug('HDMI Info', json_encode($hdmi), 0);
 
             $input1      = $hdmi->input1;
-            $input1_name = $input1->name;
+            $input1_name = $input1->name; // Friendly name, not empty
             $this->WriteAttributeString('input1_name', $input1_name);
             if (@$this->GetIDForIdent('input1_name') > 0) {
                 $this->SetValue('input1_name', $input1_name);
             }
-            $input1_type = $input1->type;
+            $input1_type = $input1->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
             $this->WriteAttributeString('input1_type', $input1_type);
             $input1_status = $input1->status;
             $this->WriteAttributeString('input1_status', $input1_status);
             $input1_lastSyncMode = $input1->lastSyncMode;
             $this->WriteAttributeString('input1_lastSyncMode', $input1_lastSyncMode);
             $input2      = $hdmi->input2;
-            $input2_name = $input2->name;
+            $input2_name = $input2->name; // Friendly name, not empty
             $this->WriteAttributeString('input2_name', $input2_name);
             if (@$this->GetIDForIdent('input2_name') > 0) {
                 $this->SetValue('input2_name', $input2_name);
             }
-            $input2_type = $input2->type;
+            $input2_type = $input2->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
             $this->WriteAttributeString('input2_type', $input2_type);
             $input2_status = $input2->status;
             $this->WriteAttributeString('input2_status', $input2_status);
             $input2_lastSyncMode = $input2->lastSyncMode;
             $this->WriteAttributeString('input2_lastSyncMode', $input2_lastSyncMode);
             $input3      = $hdmi->input3;
-            $input3_name = $input3->name;
+            $input3_name = $input3->name; // Friendly name, not empty
             $this->WriteAttributeString('input3_name', $input3_name);
             if (@$this->GetIDForIdent('input3_name') > 0) {
                 $this->SetValue('input3_name', $input3_name);
             }
-            $input3_type = $input3->type;
+            $input3_type = $input3->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
             $this->WriteAttributeString('input3_type', $input3_type);
             $input3_status = $input3->status;
             $this->WriteAttributeString('input3_status', $input3_status);
             $input3_lastSyncMode = $input3->lastSyncMode;
             $this->WriteAttributeString('input3_lastSyncMode', $input3_lastSyncMode);
             $input4      = $hdmi->input4;
-            $input4_name = $input4->name;
+            $input4_name = $input4->name; // Friendly name, not empty
             $this->WriteAttributeString('input4_name', $input4_name);
             if (@$this->GetIDForIdent('input4_name') > 0) {
                 $this->SetValue('input4_name', $input4_name);
             }
-            $input4_type = $input4->type;
+            $input4_type = $input4->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
             $this->WriteAttributeString('input4_type', $input4_type);
             $input4_status = $input4->status;
             $this->WriteAttributeString('input4_status', $input4_status);
@@ -611,31 +678,40 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeString('output_status', $output_status);
             $output_lastSyncMode = $output->lastSyncMode;
             $this->WriteAttributeString('output_lastSyncMode', $output_lastSyncMode);
-            $contentSpecs = $hdmi->contentSpecs;
+            $contentSpecs = $hdmi->contentSpecs; // <horizontal pixels> x <vertical pixels> @ <framerate fpks> – <HDR>
             $this->WriteAttributeString('contentSpecs', $contentSpecs);
-            $videoSyncSupported = $hdmi->videoSyncSupported;
+            $videoSyncSupported = $hdmi->videoSyncSupported; // Current content specs supported for video sync (video/game mode)
             $this->WriteAttributeBoolean('videoSyncSupported', $videoSyncSupported);
-            $audioSyncSupported = $hdmi->audioSyncSupported;
+            $audioSyncSupported = $hdmi->audioSyncSupported; // Current content specs supported for audio sync (music mode)
             $this->WriteAttributeBoolean('audioSyncSupported', $audioSyncSupported);
 
-            $behavior = $data->behavior;
+            $behavior = $data->behavior; // Root object for behavior resource
             $this->SendDebug('Device Behavior', json_encode($behavior), 0);
-            $cecPowersave = $behavior->cecPowersave;
+            $inactivePowersave = $behavior->inactivePowersave; // Device automatically goes to powersave after this many minutes of being in passthrough mode with no link on any source or no link on output. 0 is disabled, max is 10000. Default: 20.
+            $this->WriteAttributeInteger('inactivePowersave', $inactivePowersave);
+            $cecPowersave = $behavior->cecPowersave; // Device goes to powersave when TV sends CEC OFF. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('cecPowersave', $cecPowersave);
             if (@$this->GetIDForIdent('cecPowersave') > 0) {
                 $this->SetValue('cecPowersave', boolval($cecPowersave));
             }
-            $usbPowersave = $behavior->usbPowersave;
+            $usbPowersave = $behavior->usbPowersave; // Device goes to powersave when USB power transitions from 5V to 0V. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('usbPowersave', $usbPowersave);
             if (@$this->GetIDForIdent('usbPowersave') > 0) {
                 $this->SetValue('usbPowersave', boolval($usbPowersave));
             }
             $hpdInputSwitch = $behavior->hpdInputSwitch;
             $this->WriteAttributeInteger('hpdInputSwitch', $hpdInputSwitch);
+
+
             $arcBypassMode = $behavior->arcBypassMode;
             $this->WriteAttributeInteger('arcBypassMode', $arcBypassMode);
             if (@$this->GetIDForIdent('arcBypassMode') > 0) {
                 $this->SetValue('arcBypassMode', boolval($arcBypassMode));
+            }
+            $forceDoviNative = $behavior->forceDoviNative; // When the TV advertises Dolby Vision force to use native native mode. Disabled 0, Enabled 1.
+            $this->WriteAttributeInteger('forceDoviNative', $forceDoviNative);
+            if (@$this->GetIDForIdent('forceDoviNative') > 0) {
+                $this->SetValue('forceDoviNative', boolval($forceDoviNative));
             }
             $input1_cecInputSwitch = $behavior->input1->cecInputSwitch;
             $this->WriteAttributeInteger('input1_cecInputSwitch', $input1_cecInputSwitch);
@@ -654,15 +730,27 @@ class HueSyncBox extends IPSModule
             $input4_linkAutoSync = $behavior->input4->linkAutoSync;
             $this->WriteAttributeInteger('input4_linkAutoSync', $input4_linkAutoSync);
 
+            $ir = $data->ir; // Root object for IR resource
+            $scan = $ir->scan;
+            $scanning = $scan->scanning; // Scanning mode causes the last-received IR code to be saved (instead of processing), displayed as the ‘code’ attribute. Scanning automatically deactivates after 20 seconds but can continually be enabled again without gaps. After scanning an IR code, scanning will immediately be disabled.
+            $this->WriteAttributeBoolean('scanning', $scanning);
+            $code = $scan->code; // The last scanned code received while in scanning mode. Value is null if not scanned.
+            $this->WriteAttributeString('code', $code);
+            $codes = $scan->codes; // The last scanned code received while in scanning mode. Value is null if not scanned.
+            $this->WriteAttributeString('code', json_encode($codes));
             $registrations = $data->registrations;
             $this->SendDebug('Registrations', json_encode($registrations), 0);
             $this->WriteAttributeString('registrations', json_encode($registrations));
+            $presets = $data->presets;
+            $this->SendDebug('Presets', json_encode($presets), 0);
+            $this->WriteAttributeString('presets', json_encode($presets));
         }
         return $data_json;
     }
 
     private function GetModeValue($mode)
     {
+        // powersave, passthrough, video, game, music, ambient (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
         if ($mode == 'passthrough') {
             $mode_value = 0;
         } elseif ($mode == 'powersave') {
@@ -681,6 +769,7 @@ class HueSyncBox extends IPSModule
 
     private function GetHDMIValue($hdmiSource)
     {
+        // input1, input2, input3, input4 (currently selected hdmi input)
         if ($hdmiSource == 'input1') {
             $hdmiSource_value = 0;
         } elseif ($hdmiSource == 'input2') {
@@ -709,6 +798,24 @@ class HueSyncBox extends IPSModule
             $intensity_value = 1;
         }
         return $intensity_value;
+    }
+
+    private function GetPaletteValue($palette)
+    {
+        if ($palette == 'happyEnergetic') {
+            $palette_value = 0;
+        } elseif ($palette == 'happyCalm') {
+            $palette_value = 1;
+        } elseif ($palette == 'melancholicCalm') {
+            $palette_value = 2;
+        } elseif ($palette == 'melancholic Energetic') {
+            $palette_value = 3;
+        } elseif ($palette == 'neutral') {
+            $palette_value = 4;
+        }else {
+            $palette_value = 1;
+        }
+        return $palette_value;
     }
 
     /** Power on
@@ -748,10 +855,127 @@ class HueSyncBox extends IPSModule
         }
     }
 
+    /** LED Mode
+     * 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+     * @param int $mode
+     *
+     * @return mixed
+     */
+    public function LEDMode(int $mode)
+    {
+        return $this->SendDevice(['ledMode' => $mode]);
+    }
+
+    /**
+     * true toggles syncActive
+     */
+    public function toggleSyncActive()
+    {
+        $response = $this->SendExecution(['toggleSyncActive' => true]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Sync Active
+     * Reports false in case of powersave or passthrough mode, and true in case of video, game, music, or ambient mode. When changed from false to true, it will start syncing in last used mode for current source. Requires hue /connectionState to be connected. When changed from true to false, will set passthrough mode.
+     * @param bool $state
+     *
+     * @return mixed
+     */
+    public function SyncActive(bool $state)
+    {
+        $response = $this->SendExecution(['syncActive' => $state]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /**
+     * true toggles hdmiActive
+     */
+    public function toggleHdmiActive()
+    {
+        $response = $this->SendExecution(['toggleHdmiActive' => true]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** HDMI Active
+     * Reports false in case of powersave mode, and true in case of passthrough, video, game, music or ambient mode. When changed from false to true, it will set passthrough mode. When changed from true to false, will set powersave mode.
+     * @param bool $state
+     *
+     * @return mixed
+     */
+    public function HDMIActive(bool $state)
+    {
+        $response = $this->SendExecution(['hdmiActive' => $state]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Previous SyncMode
+     *
+     */
+    public function PreviousSyncMode()
+    {
+        $response = $this->SendExecution(['cycleSyncMode' => 'previous']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Next SyncMode
+     *
+     */
+    public function NextSyncMode()
+    {
+        $response = $this->SendExecution(['cycleSyncMode' => 'next']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Previous HDMI Source
+     *
+     */
+    public function PreviousHDMISource()
+    {
+        $response = $this->SendExecution(['cycleHdmiSource' => 'previous']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Next HDMI Source
+     *
+     */
+    public function NextHDMISource()
+    {
+        $response = $this->SendExecution(['cycleHdmiSource' => 'next']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Previous Intensity
+     * cycle intensity of current mode if syncing
+     */
+    public function PreviousIntensity()
+    {
+        $response = $this->SendExecution(['cycleIntensity' => 'previous']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Next Intensity
+     * cycle intensity of current mode if syncing
+     */
+    public function NextIntensity()
+    {
+        $response = $this->SendExecution(['cycleIntensity' => 'next']);
+        $this->GetCurrentState();
+        return $response;
+    }
+
     /** Change mode
      *
      * @param string $mode passthrough | powersave | video | music | game
-     *
+     * powersave, passthrough, video, game, music, ambient (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
      * @return array
      */
     public function Mode(string $mode)
@@ -803,6 +1027,19 @@ class HueSyncBox extends IPSModule
         return $response;
     }
 
+    /** Palette
+     *
+     * @param string $palette happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+     *
+     * @return mixed
+     */
+    public function Palette(string $palette)
+    {
+        $response = $this->SendExecution(['music' => ['palette' => $palette]]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
     /** Set HDMI Input
      *
      * @param int $input
@@ -825,7 +1062,8 @@ class HueSyncBox extends IPSModule
     }
 
     /** Set firmware autoupdate
-     *
+     * Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
+     * autoUpdateTime UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
      * @return mixed
      */
     public function SetFirmwareAutoupdate()
@@ -917,7 +1155,7 @@ class HueSyncBox extends IPSModule
     }
 
     /** CEC power state detection
-     *
+     * Device goes to powersave when TV sends CEC OFF. Default: 1. Disabled 0, Enabled 1.
      * @param bool $state
      *
      * @return mixed
@@ -930,7 +1168,7 @@ class HueSyncBox extends IPSModule
     }
 
     /** USB power state detection
-     *
+     * Device goes to powersave when USB power transitions from 5V to 0V. Default: 1. Disabled 0, Enabled 1.
      * @param bool $state
      *
      * @return mixed
@@ -943,20 +1181,20 @@ class HueSyncBox extends IPSModule
     }
 
     /** HDMI inactivity power state
-     *
-     * @param bool $state
+     * Device automatically goes to powersave after this many minutes of being in passthrough mode with no link on any source or no link on output. 0 is disabled, max is 10000. Default: 20.
+     * @param int $minutes
      *
      * @return mixed
      */
-    public function HDMI_InactivityPowerState(bool $state)
+    public function HDMI_InactivityPowerState(int $minutes)
     {
-        $response = $this->SendBehavior(['inactivePowersave' => intval($state)]);
+        $response = $this->SendBehavior(['inactivePowersave' => $minutes]);
         $this->GetCurrentState();
         return $response;
     }
 
     /** HDMI input detected
-     *
+     * Automatically switch input when any source is plugged in (or powered on). Default: 1. Disabled 0, Enabled 1.
      * @param bool $state
      *
      * @return mixed
@@ -969,7 +1207,7 @@ class HueSyncBox extends IPSModule
     }
 
     /** Auto switch inputs
-     *
+     * Automatically switch input when this source sends CEC active. Default: 1. Disabled 0, Enabled 1.
      * @param int  $input
      * @param bool $state
      *
@@ -1021,6 +1259,30 @@ class HueSyncBox extends IPSModule
         return $response;
     }
 
+    /** Force Dolby Vision
+     * When the TV advertises Dolby Vision force to use native native mode. Disabled 0, Enabled 1.
+     * @return mixed
+     */
+    public function ForceDolbyVision(bool $state)
+    {
+        $response = $this->SendBehavior(['forceDoviNative' => intval($state)]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
+    /** Scanning mode IR
+     * Scanning mode causes the last-received IR code to be saved (instead of processing), displayed as the ‘code’ attribute. Scanning automatically deactivates after 20 seconds but can continually be enabled again without gaps. After scanning an IR code, scanning will immediately be disabled.
+     * @param bool $state
+     *
+     * @return mixed
+     */
+    public function IRScan(bool $state)
+    {
+        $response = $this->SendIR(['scan' => ['scanning' => intval($state)]]);
+        $this->GetCurrentState();
+        return $response;
+    }
+
     /** Restart sync box
      *
      * @return mixed
@@ -1042,6 +1304,12 @@ class HueSyncBox extends IPSModule
     private function SendBehavior($postfields)
     {
         $data = $this->SendCommand(self::APIPATH . '/behavior', 'PUT', $postfields);
+        return json_decode($data['body']);
+    }
+
+    private function SendIR($postfields)
+    {
+        $data = $this->SendCommand(self::APIPATH . '/ir', 'PUT', $postfields);
         return json_decode($data['body']);
     }
 
@@ -1159,6 +1427,24 @@ $mode = HUESYNC_GetLastSyncMode(' . $this->InstanceID . ');
 $intensity = \'intense\';
 $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         $this->CreateScript('Hue Sync Box Intensity Intense', $this->CreateIdent('Hue Sync Box Intensity Intense'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_LEDMode(' . $this->InstanceID . ', 1);';
+        $this->CreateScript('Hue Sync Box LED Mode regular', $this->CreateIdent('Hue Sync Box LED Mode regular'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_LEDMode(' . $this->InstanceID . ', 0);';
+        $this->CreateScript('Hue Sync Box LED Mode off', $this->CreateIdent('Hue Sync Box LED Mode off'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_LEDMode(' . $this->InstanceID . ', 2);';
+        $this->CreateScript('Hue Sync Box LED Mode dimmed', $this->CreateIdent('Hue Sync Box LED Mode dimmed'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_PreviousSyncMode(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Previous Sync Mode', $this->CreateIdent('Hue Sync Box Previous Sync Mode'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_NextSyncMode(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Next Sync Mode', $this->CreateIdent('Hue Sync Box Next Sync Mode'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_PreviousHDMISource(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Previous HDMI Source', $this->CreateIdent('Hue Sync Box Previous HDMI Source'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_NextHDMISource(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Next HDMI Source', $this->CreateIdent('Hue Sync Box Next HDMI Source'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_PreviousIntensity(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Previous Intensity', $this->CreateIdent('Hue Sync Box Previous Intensity'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_NextIntensity(' . $this->InstanceID . ');';
+        $this->CreateScript('Hue Sync Box Next Intensity', $this->CreateIdent('Hue Sync Box Next Intensity'), $HueSyncScriptCategoryID, $content);
     }
 
     protected function CreateScript($scriptname, $ident, $parent, $content)
@@ -1391,6 +1677,11 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
 
         $http_code = $info['http_code'];
         $this->SendDebug(__FUNCTION__, 'Response (http_code): ' . $http_code, 0);
+        // Request Successfully	200	none	The request has been processed successfully. A JSON payload corresponding to the accessed URI (and credentials) is returned.
+        // Invalid URI Path	404	none	Accessing URI path which is not supported
+        // Authentication failed*	401	error	If credentials are missing or invalid, errors out.
+        //*If credentials are missing, continues on to GET only the Configuration state when unauthenticated, to allow for device identification.
+        // Internal error	500	none	Internal errors like out of memory
 
         $header = explode("\n", substr($result, 0, $HeaderSize));
         $this->SendDebug(__FUNCTION__, 'Response (header): ' . json_encode($header), 0);
@@ -1465,31 +1756,17 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
             }
             $this->SendDebug('State', strval($Value) . ' selected', 0);
         }
-        if ($Ident === 'LEDMode') {
-            // todo
-            //$this->Brightness($Value);
+        if ($Ident === 'ledMode') {
+            $this->LEDMode($Value);
             $this->SendDebug('LEDMode', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'syncActive') {
-            if ($Value) {
-                $mode = GetValue($this->GetIDForIdent('Mode'));
-                if ($mode == 2) {
-                    $this->Mode('video');
-                }
-                if ($mode == 3) {
-                    $this->Mode('music');
-                }
-                if ($mode == 4) {
-                    $this->Mode('game');
-                }
-            } else {
-                $this->Mode('passthrough');
-            }
-            $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
+            $this->SyncActive($Value);
+            $this->SendDebug('Sync Active', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'hdmiActive') {
-            // todo
-            $this->SendDebug('Sync Actice', strval($Value) . ' selected', 0);
+            $this->HDMIActive($Value);
+            $this->SendDebug('HDMI Active', strval($Value) . ' selected', 0);
         }
         if ($Ident === 'input1_name') {
             $this->DefineInput1Name($Value);
@@ -1518,6 +1795,28 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         if ($Ident === 'arcBypassMode') {
             $this->ARC_Bypass($Value);
         }
+        if ($Ident === 'music_palette') {
+            if ($Value == 0) {
+                $this->Palette('happyEnergetic');
+            }
+            if ($Value == 1) {
+                $this->Palette('happyCalm');
+            }
+            if ($Value == 2) {
+                $this->Palette('melancholicCalm');
+            }
+            if ($Value == 3) {
+                $this->Palette('melancholic Energetic');
+            }
+            if ($Value == 4) {
+                $this->Palette('neutral');
+            }
+        }
+        if ($Ident === 'inactivePowersave') {
+            $this->HDMI_InactivityPowerState($Value);
+        }
+
+
     }
 
 
@@ -1569,11 +1868,11 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
             $registrations = json_decode($this->ReadAttributeString('registrations'));
             foreach ($registrations as $key => $registration) {
                 $position               = $key;
-                $appName                = $registration->appName;
-                $instanceName           = $registration->instanceName;
-                $role                   = $registration->role;
-                $lastUsed               = $registration->lastUsed;
-                $created                = $registration->created;
+                $appName                = $registration->appName; // User recognizable name of registered application
+                $instanceName           = $registration->instanceName; // User recognizable name of application instance. Either a user name if single registration for user is shared over devices, or device name if each device uses a separate registration.
+                $role                   = $registration->role; // admin/user
+                $lastUsed               = $registration->lastUsed; // UTC time when this registration was last used
+                $created                = $registration->created; // UTC time when this registration was created
                 $registrations_values[] = [
                     'position'     => $position,
                     'appName'      => $appName,
@@ -1930,9 +2229,10 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
             } else {
                 $selected = false;
             }
-            $name                      = $group->name;
-            $numLights                 = $group->numLights;
+            $name                      = $group->name; // Friendly name of the entertainment group
+            $numLights                 = $group->numLights; // Currently 0-10
             $active                    = $group->active;
+            // owner Only exposed if active is true
             $EntertainmentZoneValues[] =
                 ['groupId' => $key, 'name' => $name, 'numLights' => $numLights, 'active' => $active, 'selected' => $selected];
         }
@@ -2077,26 +2377,26 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
             [
                 'type'    => 'Label',
                 'visible' => true,
-                'caption' => 'Connect a USB cable to your TV to recognize its switched-on status and to be able to switch the Sync Box on and off accordingly. Deactivating this function does not deactivate the automatic switch-on.'],/*
+                'caption' => 'Connect a USB cable to your TV to recognize its switched-on status and to be able to switch the Sync Box on and off accordingly. Deactivating this function does not deactivate the automatic switch-on.'],
             [
                 'type'    => 'RowLayout',
                 'visible' => true,
                 'items'   => [
                     [
                         'type'     => 'CheckBox',
-                        'name'     => 'show_0_osd',
+                        'name'     => 'inactivePowersave',
                         'visible'  => true,
-                        'caption'  => 'HDMI inactive for 20 min',
-                        'value'    => boolval($this->ReadAttributeInteger('show_0_osd')),
-                        'onChange' => 'HUESYNC_EnableOSD_Time($id, $show_0_osd);'],
+                        'caption'  => 'HDMI inactive for x min',
+                        'value'    => $this->ReadAttributeInteger('inactivePowersave'),
+                        'onChange' => 'HUESYNC_HDMI_InactivityPowerState($id, $inactivePowersave);'],
                     [
-                        'name'     => 'show_0_osd_enabled',
+                        'name'     => 'inactivePowersave_enabled',
                         'type'     => 'CheckBox',
                         'caption'  => 'Create Variable for Webfront',
                         'visible'  => true,
-                        'value'    => $this->ReadAttributeBoolean('show_0_osd_enabled'),
-                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "show_0_osd_enabled", $show_0_osd_enabled);'],]]
-            */
+                        'value'    => $this->ReadAttributeBoolean('inactivePowersave_enabled'),
+                        'onChange' => 'HUESYNC_SetWebFrontVariable($id, "inactivePowersave_enabled", $inactivePowersave_enabled);'],]]
+
 
         ];
         return $form;

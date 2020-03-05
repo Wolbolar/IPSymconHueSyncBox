@@ -84,7 +84,17 @@
             "Activate voice control by Alexa": "Aktiviere Sprachsteuerung über Alexa",
             "Activate voice control by Google Assistant": "Aktiviere Sprachsteuerung über Google Assistant",
             "Activate voice control by Siri": "Aktiviere Sprachsteuerung über Siri",
-            "category Hue Sync Box": "Kategorie Hue Sync Box"
+            "category Hue Sync Box": "Kategorie Hue Sync Box",
+            "off": "aus",
+            "dimmed": "gedimmt",
+            "regular": "regulär",
+            "happy energetic": "glücklich energetisch",
+            "happy calm": "glücklich Ruhe",
+            "melancholic calm": "melancholisch Ruhe",
+            "melancholic energetic": "melancholisch energetisch",
+            "neutral": "neutral",
+            "HDMI Inactivity Power State": "Power-Status für HDMI-Inaktivität",
+            "HDMI inactive for x min": "HDMI Inaktivität für x Minuten"
         }
     }
 }
