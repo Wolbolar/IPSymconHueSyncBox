@@ -116,6 +116,11 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeInteger('Intensity', 0);
         $this->RegisterAttributeBoolean('State', false);
         $this->RegisterAttributeBoolean('LEDMode', false);
+        $this->RegisterPropertyInteger('ImportCategoryID', 0);
+        $this->RegisterPropertyBoolean('HueSyncScript', false);
+        $this->RegisterAttributeBoolean('AlexaVoiceControl', false);
+        $this->RegisterAttributeBoolean('GoogleVoiceControl', false);
+        $this->RegisterAttributeBoolean('SiriVoiceControl', false);
 
 
         //we will wait until the kernel is ready
@@ -194,6 +199,11 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Hue Sync Box', 'Hue Sync Box host not valid', 0);
             $this->SetStatus(218); //IP Adresse oder Host ist ungültig
         } else {
+            $huescript = $this->ReadPropertyBoolean('HueSyncScript');
+            if($huescript)
+            {
+                $this->SetupHueSyncScripts();
+            }
             $this->SetStatus(IS_ACTIVE);
             return true;
         }
@@ -244,7 +254,7 @@ class HueSyncBox extends IPSModule
             'LEDMode', $this->Translate('LED Mode'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
         $this->SetupVariable(
-            'syncActive', $this->Translate('Sync Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, false, true
+            'syncActive', $this->Translate('Sync Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, true
         );
         $this->SetupVariable(
             'hdmiActive', $this->Translate('HDMI Active'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, false, true
@@ -341,6 +351,12 @@ class HueSyncBox extends IPSModule
     {
         $this->WriteAttributeBoolean($ident, $value);
         $this->SetupVariables();
+    }
+
+    public function GetLastSyncMode()
+    {
+        $lastSyncMode = $this->ReadAttributeString('lastSyncMode');
+        return $lastSyncMode;
     }
 
     public function Update()
@@ -541,7 +557,7 @@ class HueSyncBox extends IPSModule
             $input1      = $hdmi->input1;
             $input1_name = $input1->name;
             $this->WriteAttributeString('input1_name', $input1_name);
-            if ($this->GetIDForIdent('input1_name') > 0) {
+            if (@$this->GetIDForIdent('input1_name') > 0) {
                 $this->SetValue('input1_name', $input1_name);
             }
             $input1_type = $input1->type;
@@ -553,7 +569,7 @@ class HueSyncBox extends IPSModule
             $input2      = $hdmi->input2;
             $input2_name = $input2->name;
             $this->WriteAttributeString('input2_name', $input2_name);
-            if ($this->GetIDForIdent('input2_name') > 0) {
+            if (@$this->GetIDForIdent('input2_name') > 0) {
                 $this->SetValue('input2_name', $input2_name);
             }
             $input2_type = $input2->type;
@@ -565,7 +581,7 @@ class HueSyncBox extends IPSModule
             $input3      = $hdmi->input3;
             $input3_name = $input3->name;
             $this->WriteAttributeString('input3_name', $input3_name);
-            if ($this->GetIDForIdent('input3_name') > 0) {
+            if (@$this->GetIDForIdent('input3_name') > 0) {
                 $this->SetValue('input3_name', $input3_name);
             }
             $input3_type = $input3->type;
@@ -577,7 +593,7 @@ class HueSyncBox extends IPSModule
             $input4      = $hdmi->input4;
             $input4_name = $input4->name;
             $this->WriteAttributeString('input4_name', $input4_name);
-            if ($this->GetIDForIdent('input4_name') > 0) {
+            if (@$this->GetIDForIdent('input4_name') > 0) {
                 $this->SetValue('input4_name', $input4_name);
             }
             $input4_type = $input4->type;
@@ -606,19 +622,19 @@ class HueSyncBox extends IPSModule
             $this->SendDebug('Device Behavior', json_encode($behavior), 0);
             $cecPowersave = $behavior->cecPowersave;
             $this->WriteAttributeInteger('cecPowersave', $cecPowersave);
-            if ($this->GetIDForIdent('cecPowersave') > 0) {
+            if (@$this->GetIDForIdent('cecPowersave') > 0) {
                 $this->SetValue('cecPowersave', boolval($cecPowersave));
             }
             $usbPowersave = $behavior->usbPowersave;
             $this->WriteAttributeInteger('usbPowersave', $usbPowersave);
-            if ($this->GetIDForIdent('usbPowersave') > 0) {
+            if (@$this->GetIDForIdent('usbPowersave') > 0) {
                 $this->SetValue('usbPowersave', boolval($usbPowersave));
             }
             $hpdInputSwitch = $behavior->hpdInputSwitch;
             $this->WriteAttributeInteger('hpdInputSwitch', $hpdInputSwitch);
             $arcBypassMode = $behavior->arcBypassMode;
             $this->WriteAttributeInteger('arcBypassMode', $arcBypassMode);
-            if ($this->GetIDForIdent('arcBypassMode') > 0) {
+            if (@$this->GetIDForIdent('arcBypassMode') > 0) {
                 $this->SetValue('arcBypassMode', boolval($arcBypassMode));
             }
             $input1_cecInputSwitch = $behavior->input1->cecInputSwitch;
@@ -1045,6 +1061,269 @@ class HueSyncBox extends IPSModule
         return json_decode($data['body']);
     }
 
+    public function SetVoiceControl($type)
+    {
+        if($type == 'Alexa')
+        {
+            $this->SendDebug('Hue Sync', 'Setup Alexa Voice Control', 0);
+        }
+        if($type == 'Google')
+        {
+            $this->SendDebug('Hue Sync', 'Setup Google Voice Control', 0);
+        }
+        if($type == 'Homekit')
+        {
+            $this->SendDebug('Hue Sync', 'Setup Homekit Voice Control', 0);
+        }
+    }
+
+    public function SetupHueSyncScripts()
+    {
+        $huesyncscript = $this->ReadPropertyBoolean('HueSyncScript');
+        $cat_id = $this->ReadPropertyInteger('ImportCategoryID');
+        if($huesyncscript && $cat_id > 0)
+        {
+            $HueSyncScriptCategoryID = $this->CreateHueSyncScriptCategory();
+            $this->CreateHueSyncScripts($HueSyncScriptCategoryID);
+        }
+    }
+
+    protected function CreateHueSyncScriptCategory()
+    {
+        $CategoryID = $this->ReadPropertyInteger('ImportCategoryID');
+        //Prüfen ob Kategorie schon existiert
+        $HueSyncScriptCategoryID = @IPS_GetObjectIDByIdent('CatHueSyncScripts', $CategoryID);
+        if ($HueSyncScriptCategoryID === false) {
+            $HueSyncScriptCategoryID = IPS_CreateCategory();
+            IPS_SetName($HueSyncScriptCategoryID, $this->Translate('Hue Sync Scripts'));
+            IPS_SetIdent($HueSyncScriptCategoryID, 'CatHueSyncScripts');
+            IPS_SetInfo($HueSyncScriptCategoryID, $this->Translate('Hue Sync Scripts'));
+            IPS_SetParent($HueSyncScriptCategoryID, $CategoryID);
+        }
+        $this->SendDebug('Hue Sync Script Category', strval($HueSyncScriptCategoryID), 0);
+
+        return $HueSyncScriptCategoryID;
+    }
+
+    protected function CreateHueSyncScripts($HueSyncScriptCategoryID)
+    {
+        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 1);';
+        $this->CreateScript('Hue Sync Box HDMI 1', $this->CreateIdent('Hue Sync Box HDMI 1'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 2);';
+        $this->CreateScript('Hue Sync Box HDMI 2', $this->CreateIdent('Hue Sync Box HDMI 2'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 3);';
+        $this->CreateScript('Hue Sync Box HDMI 3', $this->CreateIdent('Hue Sync Box HDMI 3'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 4);';
+        $this->CreateScript('Hue Sync Box HDMI 4', $this->CreateIdent('Hue Sync Box HDMI 4'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 4);';
+        $this->CreateScript('Hue Sync Box HDMI 4', $this->CreateIdent('Hue Sync Box HDMI 4'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'passthrough\');';
+        $ScriptID_PowerOn = $this->CreateScript('Hue Sync Box Power On', $this->CreateIdent('Hue Sync Box Power On'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'powersave\');';
+        $ScriptID_PowerOff = $this->CreateScript('Hue Sync Box Power Off', $this->CreateIdent('Hue Sync Box Power Off'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php
+$status = GetValueBoolean(IPS_GetObjectIDByIdent(\'State\', '. $this->InstanceID.')); // Status des Geräts auslesen
+IPS_LogMessage( "Hue Sync Box:" , "Befehl ausführen" );
+if ($status == false)// Befehl ausführen
+	{
+   IPS_RunScript('.$ScriptID_PowerOn.');
+	}
+elseif ($status == true)// Befehl ausführen
+	{
+   IPS_RunScript('.$ScriptID_PowerOff.');
+	}';
+        $this->CreateScript('Hue Sync Box Power Toggle', $this->CreateIdent('Hue Sync Box Power Toggle'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'game\');';
+        $this->CreateScript('Hue Sync Box Mode Game', $this->CreateIdent('Hue Sync Box Mode Game'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'video\');';
+        $this->CreateScript('Hue Sync Box Mode Video', $this->CreateIdent('Hue Sync Box Mode Video'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'music\');';
+        $this->CreateScript('Hue Sync Box Mode Music', $this->CreateIdent('Hue Sync Box Mode Music'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php
+$mode = HUESYNC_GetLastSyncMode(' . $this->InstanceID . ');
+$intensity = \'subtle\';
+$response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
+        $this->CreateScript('Hue Sync Box Intensity Subtle', $this->CreateIdent('Hue Sync Box Intensity Subtle'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php
+$mode = HUESYNC_GetLastSyncMode(' . $this->InstanceID . ');
+$intensity = \'moderate\';
+$response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
+        $this->CreateScript('Hue Sync Box Intensity Moderate', $this->CreateIdent('Hue Sync Box Intensity Moderate'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php
+$mode = HUESYNC_GetLastSyncMode(' . $this->InstanceID . ');
+$intensity = \'high\';
+$response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
+        $this->CreateScript('Hue Sync Box Intensity High', $this->CreateIdent('Hue Sync Box Intensity High'), $HueSyncScriptCategoryID, $content);
+        $content = '<?php
+$mode = HUESYNC_GetLastSyncMode(' . $this->InstanceID . ');
+$intensity = \'intense\';
+$response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
+        $this->CreateScript('Hue Sync Box Intensity Intense', $this->CreateIdent('Hue Sync Box Intensity Intense'), $HueSyncScriptCategoryID, $content);
+    }
+
+    protected function CreateScript($scriptname, $ident, $parent, $content)
+    {
+        $ScriptID           = @IPS_GetObjectIDByIdent($ident, $parent);
+        if ($ScriptID === false) {
+            $ScriptID = IPS_CreateScript(0);
+            IPS_SetName($ScriptID, $scriptname);
+            IPS_SetParent($ScriptID, $parent);
+            IPS_SetIdent($ScriptID, $ident);
+            IPS_SetScriptContent($ScriptID, $content);
+        }
+        return $ScriptID;
+    }
+
+    protected function CreateIdent($str)
+    {
+        $search  = [
+            'ä',
+            'ö',
+            'ü',
+            'ß',
+            'Ä',
+            'Ö',
+            'Ü',
+            '&',
+            'é',
+            'á',
+            'ó',
+            ' :)',
+            ' :D',
+            ' :-)',
+            ' :P',
+            ' :O',
+            ' ;D',
+            ' ;)',
+            ' ^^',
+            ' :|',
+            ' :-/',
+            ':)',
+            ':D',
+            ':-)',
+            ':P',
+            ':O',
+            ';D',
+            ';)',
+            '^^',
+            ':|',
+            ':-/',
+            '(',
+            ')',
+            '[',
+            ']',
+            '<',
+            '>',
+            '!',
+            '"',
+            '§',
+            '$',
+            '%',
+            '&',
+            '/',
+            '(',
+            ')',
+            '=',
+            '?',
+            '`',
+            '´',
+            '*',
+            "'",
+            '-',
+            ':',
+            ';',
+            '²',
+            '³',
+            '{',
+            '}',
+            '\\',
+            '~',
+            '#',
+            '+',
+            '.',
+            ',',
+            '=',
+            ':',
+            '=)', ];
+        $replace = [
+            'ae',
+            'oe',
+            'ue',
+            'ss',
+            'Ae',
+            'Oe',
+            'Ue',
+            'und',
+            'e',
+            'a',
+            'o',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '', ];
+
+        $str = str_replace($search, $replace, $str);
+        $str = str_replace(' ', '_', $str); // Replaces all spaces with underline.
+        $how = '_';
+        //$str = strtolower(preg_replace("/[^a-zA-Z0-9]+/", trim($how), $str));
+        $str = preg_replace('/[^a-zA-Z0-9]+/', trim($how), $str);
+
+        return $str;
+    }
+
     protected function SendCommand($command, $type, $postfields = null)
     {
         if ($postfields !== null) {
@@ -1240,6 +1519,8 @@ class HueSyncBox extends IPSModule
             $this->ARC_Bypass($Value);
         }
     }
+
+
 
     /***********************************************************
      * Configuration Form
@@ -1453,7 +1734,64 @@ class HueSyncBox extends IPSModule
                                 'width'   => '200px',
                                 'save'    => true,
                                 'visible' => true]],
-                        'values'   => $registrations_values]]]];
+                        'values'   => $registrations_values]]],
+            [
+                'type'    => 'ExpansionPanel',
+                'caption' => 'Hue Sync Scripts',
+                'visible' => true,
+                'items'   => [
+                    [
+                        'name'    => 'ImportCategoryID',
+                        'type'    => 'SelectCategory',
+                        'caption' => 'category Hue Sync Box', ],
+                    [
+                        'type'    => 'Label',
+                        'visible' => true,
+                        'caption' => 'Create scripts for control of the Hue Sync Box'],
+                    [
+                        'name'     => 'HueSyncScript',
+                        'type'     => 'CheckBox',
+                        'caption'  => 'Create scripts',
+                        'visible'  => true]
+                    ]],
+            [
+                'type'    => 'ExpansionPanel',
+                'caption' => 'Voice Control',
+                'visible' => false,
+                'items'   => [
+                    [
+                        'type'    => 'Label',
+                        'visible' => true,
+                        'caption' => 'Activate voice control by Alexa'],
+                    [
+                        'name'     => 'AlexaVoiceControl',
+                        'type'     => 'CheckBox',
+                        'caption'  => 'Alexa',
+                        'visible'  => true,
+                        'value'    => $this->ReadAttributeBoolean('AlexaVoiceControl'),
+                        'onChange' => 'HUESYNC_SetVoiceControl($id, "Alexa");'],
+                    [
+                        'type'    => 'Label',
+                        'visible' => true,
+                        'caption' => 'Activate voice control by Google Assistant'],
+                    [
+                        'name'     => 'GoogleVoiceControl',
+                        'type'     => 'CheckBox',
+                        'caption'  => 'Google Assistant',
+                        'visible'  => true,
+                        'value'    => $this->ReadAttributeBoolean('GoogleVoiceControl'),
+                        'onChange' => 'HUESYNC_SetVoiceControl($id, "Google");'],
+                    [
+                        'type'    => 'Label',
+                        'visible' => true,
+                        'caption' => 'Activate voice control by Siri'],
+                    [
+                        'name'     => 'SiriVoiceControl',
+                        'type'     => 'CheckBox',
+                        'caption'  => 'Siri',
+                        'visible'  => true,
+                        'value'    => $this->ReadAttributeBoolean('SiriVoiceControl'),
+                        'onChange' => 'HUESYNC_SetVoiceControl($id, "Homekit");']]]];
         return $form;
     }
 

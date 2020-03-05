@@ -76,7 +76,15 @@
             "CEC Powersave": "CEC Powersave",
             "USB Powersave": "USB Powersave",
             "Backlight Video": "Hintergrundbeleuchtung Video",
-            "Backlight Game": "Hintergrundbeleuchtung Game"
+            "Backlight Game": "Hintergrundbeleuchtung Game",
+            "Hue Sync Scripts": "Hue Sync Skripte",
+            "Voice Control": "Sprachsteuerung",
+            "Create scripts for control of the Hue Sync Box": "Skripte zur Steuerung der Hue Sync Box anlegen",
+            "Create scripts": "Skripte anlegen",
+            "Activate voice control by Alexa": "Aktiviere Sprachsteuerung über Alexa",
+            "Activate voice control by Google Assistant": "Aktiviere Sprachsteuerung über Google Assistant",
+            "Activate voice control by Siri": "Aktiviere Sprachsteuerung über Siri",
+            "category Hue Sync Box": "Kategorie Hue Sync Box"
         }
     }
 }
