@@ -275,6 +275,59 @@ HUESYNC_USB_PowerStateDetection(integer $InstanceID, boolean $state)
 Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
 
 Parameter _$state_: true | false
+
+**LED Mode**
+```php
+HUESYNC_LEDMode(integer $InstanceID, int $mode)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+Parameter _$mode_: 0 = off | 1 = regular | 2 = dimmed
+
+**Previous SyncMode**
+```php
+HUESYNC_PreviousSyncMode(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Next SyncMode**
+```php
+HUESYNC_NextSyncMode(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Previous HDMI Source**
+```php
+HUESYNC_PreviousHDMISource(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Next SyncMode**
+```php
+HUESYNC_NextHDMISource(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Previous Intensity**
+```php
+HUESYNC_PreviousIntensity(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Next Intensity**
+```php
+HUESYNC_NextIntensity(integer $InstanceID)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+**Palette**
+```php
+HUESYNC_Palette(integer $InstanceID, string $palette)
+``` 
+Parameter _$InstanceID_: ObjektID der Philips Hue Sync Box Instanz.
+
+Parameter _$palette_: happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+
 	 
 ###  b. GUIDs und Datenaustausch:
 
