@@ -736,7 +736,7 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeBoolean('scanning', $scanning);
             $code = $scan->code; // The last scanned code received while in scanning mode. Value is null if not scanned.
             $this->WriteAttributeString('code', $code);
-            $codes = $scan->codes; // The last scanned code received while in scanning mode. Value is null if not scanned.
+            $codes = $ir->codes; // The last scanned code received while in scanning mode. Value is null if not scanned.
             $this->WriteAttributeString('code', json_encode($codes));
             $registrations = $data->registrations;
             $this->SendDebug('Registrations', json_encode($registrations), 0);
