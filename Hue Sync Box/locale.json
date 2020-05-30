@@ -94,7 +94,10 @@
             "melancholic energetic": "melancholisch energetisch",
             "neutral": "neutral",
             "HDMI Inactivity Power State": "Power-Status für HDMI-Inaktivität",
-            "HDMI inactive for x min": "HDMI Inaktivität für x Minuten"
+            "HDMI inactive for x min": "HDMI Inaktivität für x Minuten",
+            "IR Codes": "IR Codes",
+            "ir code": "IR Code",
+            "command": "Befehl"
         }
     }
 }
