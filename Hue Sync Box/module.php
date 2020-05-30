@@ -459,7 +459,7 @@ class HueSyncBox extends IPSModule
             'appSecret'    => self::APPSECRET,
             'instanceName' => $this->ReadPropertyString('instance_name')];
         $response['body'] = $this->SendCommand('/api/v1/registrations', 'POST', $postfields);
-        $data             = json_decode($response, true);
+        $data             = json_decode($response['body'], true);
         if (isset($data['registrationId']) && isset($data['accessToken'])) {
             $access_token   = $data['accessToken'];
             $registrationId = $data['registrationId'];
@@ -599,11 +599,16 @@ class HueSyncBox extends IPSModule
             $music_palette = $music->palette; // happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
             $this->WriteAttributeString('music_palette', $music_palette);
             $this->SetValue('music_palette', $this->GetPaletteValue($music_palette));
-            $preset = $execution->preset; // Preset identifier, that will be executed
-            $this->WriteAttributeString('preset', $preset);
-            $ambient = $execution->ambient;
-            $this->WriteAttributeString('ambient', json_encode($ambient));
-
+            if(isset($execution->preset))
+            {
+                $preset = $execution->preset; // Preset identifier, that will be executed
+                $this->WriteAttributeString('preset', $preset);
+            }
+            if(isset($execution->ambient))
+            {
+                $ambient = $execution->ambient;
+                $this->WriteAttributeString('ambient', json_encode($ambient));
+            }
 
             if ($lastSyncMode == 'video') {
                 $intensity = $video->intensity;
@@ -736,8 +741,11 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeBoolean('scanning', $scanning);
             $code = $scan->code; // The last scanned code received while in scanning mode. Value is null if not scanned.
             $this->WriteAttributeString('code', $code);
+            $this->SendDebug('Last IR Code', $code, 0);
             $codes = $ir->codes; // The last scanned code received while in scanning mode. Value is null if not scanned.
-            $this->WriteAttributeString('code', json_encode($codes));
+            $this->WriteAttributeString('codes', json_encode($codes));
+            $this->SendDebug('IR Codes', json_encode($codes), 0);
+
             $registrations = $data->registrations;
             $this->SendDebug('Registrations', json_encode($registrations), 0);
             $this->WriteAttributeString('registrations', json_encode($registrations));
@@ -2150,7 +2158,14 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
                             'name'     => 'AdvancedSynchronizationSettings',
                             'visible'  => true,
                             'expanded' => false,
-                            'items'    => $this->FormAdvancedSynchronizationSettings()]]]];
+                            'items'    => $this->FormAdvancedSynchronizationSettings()],
+                        [
+                            'type'     => 'ExpansionPanel',
+                            'caption'  => 'IR Codes',
+                            'name'     => 'IRCodes',
+                            'visible'  => true,
+                            'expanded' => false,
+                            'items'    => $this->FormIRCodes()]]]];
         }
         return $form;
     }
@@ -2482,6 +2497,61 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
 
         ];
         return $form;
+    }
+
+    protected function FormIRCodes()
+    {
+        $form = [
+            [
+                'type'     => 'List',
+                'name'     => 'IRCodesList',
+                'caption'  => 'IR Codes',
+                'visible'  => true,
+                'rowCount' => 20,
+                'sort'     => [
+                    'column'    => 'name',
+                    'direction' => 'ascending'],
+                'columns'  => [
+                    [
+                        'name'    => 'ircode',
+                        'caption' => 'ir code',
+                        'width'   => '100px',
+                        'save'    => true,
+                        'visible' => false],
+                    [
+                        'name'    => 'name',
+                        'caption' => 'name',
+                        'width'   => '200px',
+                        'save'    => true],
+                    [
+                        'name'    => 'commandir',
+                        'caption' => 'command',
+                        'width'   => '200px',
+                        'save'    => true,
+                        'visible' => true]],
+                'values'   => $this->GetIRCodeList()]
+
+        ];
+        return $form;
+    }
+
+    protected function GetIRCodeList()
+    {
+        $codes = $this->ReadAttributeString('codes');
+        $this->SendDebug('Get IR Codes', $codes, 0);
+        $ir_codes              = json_decode($codes);
+        $IRCodeValues = [];
+        foreach ($ir_codes as $key => $ir_code) {
+            $name                      = $ir_code->name; // Friendly name of the ir code
+            $execution                = $ir_code->execution;
+            foreach ($execution as $execution_key => $command_value) {
+                $command_ir = $execution_key . " " . strval($command_value);
+            }
+            $IRCodeValues[] =
+                ['ircode' => $key, 'name' => $name, 'commandir' => $command_ir];
+        }
+        $this->SendDebug('IR code list values', json_encode($IRCodeValues), 0);
+        return $IRCodeValues;
     }
 
     /**
