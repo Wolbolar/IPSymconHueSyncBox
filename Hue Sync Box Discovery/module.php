@@ -152,6 +152,7 @@ class HueSyncBoxDiscovery extends IPSModule
                 $ip       = $data["IPv4"][0];
                 $fields   = $data["TXTRecords"];
                 foreach ($fields as $field) {
+                    $path = '';
                     if (strpos($field, "path=") === 0) {
                         $path = str_ireplace('path=', '', $field);
                     }

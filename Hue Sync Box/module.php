@@ -2517,7 +2517,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
                         'caption' => 'ir code',
                         'width'   => '100px',
                         'save'    => true,
-                        'visible' => false],
+                        'visible' => true],
                     [
                         'name'    => 'name',
                         'caption' => 'name',
