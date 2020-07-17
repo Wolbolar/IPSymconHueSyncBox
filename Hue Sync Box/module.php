@@ -385,7 +385,7 @@ class HueSyncBox extends IPSModule
         return $objid;
     }
 
-    public function SetWebFrontVariable($ident, $value)
+    public function SetWebFrontVariable(string $ident, bool $value)
     {
         $this->WriteAttributeBoolean($ident, $value);
         $this->SetupVariables();
@@ -1337,7 +1337,7 @@ class HueSyncBox extends IPSModule
         return json_decode($data['body']);
     }
 
-    public function SetVoiceControl($type)
+    public function SetVoiceControl(string $type)
     {
         if($type == 'Alexa')
         {
