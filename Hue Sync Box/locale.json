@@ -97,7 +97,10 @@
             "HDMI inactive for x min": "HDMI Inaktivität für x Minuten",
             "IR Codes": "IR Codes",
             "ir code": "IR Code",
-            "command": "Befehl"
+            "command": "Befehl",
+            "device button is not yet pressed": "Der Knopf am Gerät wurde noch nicht gedrückt",
+            "Within 5 seconds of the response, hold the device button until the led blinks green (~3 seconds) and release.": "Halten Sie innerhalb von 5 Sekunden nach der Antwort die Gerätetaste gedrückt, bis die LED grün blinkt (~ 3 Sekunden), und lassen Sie sie los.",
+            "Within 5 seconds of releasing, send the registration request again": "Senden Sie die Registrierungsanfrage innerhalb von 5 Sekunden nach der Freigabe erneut"
         }
     }
 }
