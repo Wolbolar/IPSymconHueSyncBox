@@ -458,14 +458,29 @@ class HueSyncBox extends IPSModule
             'appName'      => $this->ReadPropertyString('app_name'),
             'appSecret'    => self::APPSECRET,
             'instanceName' => $this->ReadPropertyString('instance_name')];
-        $response['body'] = $this->SendCommand('/api/v1/registrations', 'POST', $postfields);
-        $data             = json_decode($response['body'], true);
-        if (isset($data['registrationId']) && isset($data['accessToken'])) {
-            $access_token   = $data['accessToken'];
-            $registrationId = $data['registrationId'];
-            $this->WriteAccessToken($access_token, $registrationId);
+        $response = $this->SendCommand('/api/v1/registrations', 'POST', $postfields);
+        if(isset($response['body']))
+        {
+            if($response['body'] == '{"code":16,"message":"Invalid State"}')
+            {
+                $this->SendDebug('Hue Sync Box', $this->Translate('device button is not yet pressed'), 0);
+                $this->SendDebug('Hue Sync Box', $this->Translate('Within 5 seconds of the response, hold the device button until the led blinks green (~3 seconds) and release.'), 0);
+                $this->SendDebug('Hue Sync Box', $this->Translate('Within 5 seconds of releasing, send the registration request again'), 0);
+                return [];
+            }
+
+            $data             = json_decode($response['body'], true);
+            if (isset($data['registrationId']) && isset($data['accessToken'])) {
+                $access_token   = $data['accessToken'];
+                $registrationId = intval($data['registrationId']);
+                $this->WriteAccessToken($access_token, $registrationId);
+            }
+            return $response;
         }
-        return $response;
+        else
+        {
+            return [];
+        }
     }
 
     public function WriteAccessToken(string $access_token, int $registrationId)
