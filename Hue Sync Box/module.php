@@ -428,23 +428,44 @@ class HueSyncBox extends IPSModule
         $this->SetValue('firmwareVersion', $firmwareVersion);
         $buildNumber = $device_info->buildNumber;
         $this->WriteAttributeInteger('buildNumber', $buildNumber); // Build number of the firmware. Unique for every build with newer builds guaranteed a higher number than older.
-        $lastCheckedUpdate = $device_info->lastCheckedUpdate;
-        $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate); // UTC time when last check for update was performed.
-        $updatableBuildNumber = $device_info->updatableBuildNumber;
-        $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber); // Build number that is available to update to. Item is set to null when there is no update available.
-        $updatableFirmwareVersion = $device_info->updatableFirmwareVersion;
-        $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion); // User readable version of the firmware the device can upgrade to. Item is set to null when there is no update available.
-        $autoUpdateEnabled = $device_info->update->autoUpdateEnabled; // update Root object for automatic update configuration
-        $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled); // Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
-        $autoUpdateTime = $device_info->update->autoUpdateTime; // update Root object for automatic update configuration
-        $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime); // UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
-        $ledMode = $device_info->ledMode;
-        $this->WriteAttributeInteger('ledMode', $ledMode); // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
-        $this->SetValue('ledMode', $ledMode);
-        $wifiState = $device_info->wifiState;
-        $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
-        $termsAgreed = $device_info->lastCheckedUpdate;
-        $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
+        if(property_exists($device_info,'lastCheckedUpdate'))
+        {
+            $lastCheckedUpdate = $device_info->lastCheckedUpdate;
+            $this->WriteAttributeString('lastCheckedUpdate', $lastCheckedUpdate); // UTC time when last check for update was performed.
+        }
+        if(property_exists($device_info,'updatableBuildNumber'))
+        {
+            $updatableBuildNumber = $device_info->updatableBuildNumber;
+            $this->WriteAttributeString('updatableBuildNumber', $updatableBuildNumber); // Build number that is available to update to. Item is set to null when there is no update available.
+        }
+        if(property_exists($device_info,'updatableFirmwareVersion'))
+        {
+            $updatableFirmwareVersion = $device_info->updatableFirmwareVersion;
+            $this->WriteAttributeString('updatableFirmwareVersion', $updatableFirmwareVersion); // User readable version of the firmware the device can upgrade to. Item is set to null when there is no update available.
+        }
+        if(property_exists($device_info,'update'))
+        {
+            $autoUpdateEnabled = $device_info->update->autoUpdateEnabled; // update Root object for automatic update configuration
+            $this->WriteAttributeBoolean('autoUpdateEnabled', $autoUpdateEnabled); // Sync Box checks daily for a firmware update. If true, an available update will automatically be installed. This will be postponed if Sync Box is passing through content to the TV and being used.
+            $autoUpdateTime = $device_info->update->autoUpdateTime; // update Root object for automatic update configuration
+            $this->WriteAttributeInteger('autoUpdateTime', $autoUpdateTime); // UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
+        }
+        if(property_exists($device_info,'ledMode'))
+        {
+            $ledMode = $device_info->ledMode;
+            $this->WriteAttributeInteger('ledMode', $ledMode); // 1 = regular; 0 = off in powersave, passthrough or sync mode; 2 = dimmed in powersave or passthrough mode and off in sync mode
+            $this->SetValue('ledMode', $ledMode);
+        }
+        if(property_exists($device_info,'wifiState'))
+        {
+            $wifiState = $device_info->wifiState;
+            $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
+        }
+        if(property_exists($device_info,'lastCheckedUpdate'))
+        {
+            $termsAgreed = $device_info->lastCheckedUpdate;
+            $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
+        }
         return $device_info;
     }
 
