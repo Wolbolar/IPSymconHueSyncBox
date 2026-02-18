@@ -34,7 +34,7 @@ class HueSyncBoxDiscovery extends IPSModule
         $this->SetStatus(IS_ACTIVE);
     }
 
-    public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
     {
         switch ($Message) {
             case IM_CHANGESTATUS:
@@ -57,13 +57,16 @@ class HueSyncBoxDiscovery extends IPSModule
         }
     }
 
-    private function StartDiscovery()
+    private function StartDiscovery(): void
     {
-        if (empty($this->DiscoverDevices())) {
+        $devices = $this->DiscoverDevices();
+
+        if (empty($devices)) {
             $this->SendDebug('Discover:', 'could not find Hue Sync Box info', 0);
         } else {
-            $this->WriteAttributeString('devices', json_encode($this->DiscoverDevices()));
+            $this->WriteAttributeString('devices', json_encode($devices));
         }
+
         $this->SetTimerInterval('Discovery', 300000);
     }
 
@@ -72,7 +75,7 @@ class HueSyncBoxDiscovery extends IPSModule
      *
      * @return array configlist all devices
      */
-    private function Get_ListConfiguration()
+    private function Get_ListConfiguration(): array
     {
         $config_list      = [];
         $HueSyncBoxIDList = IPS_GetInstanceListByModuleID('{716FA5CE-2292-8EA5-78F9-8B245EFAF0A7}'); // Hue Sync Box Devices
@@ -139,66 +142,137 @@ class HueSyncBoxDiscovery extends IPSModule
         return $huesync_infos;
     }
 
-    protected function GetHueSyncBoxInfo($devices)
+    protected function GetHueSyncBoxInfo($devices): array
     {
         $mDNSInstanceID = $this->GetDNSSD();
-        $huesync_info   = [];
+        if ($mDNSInstanceID <= 0) {
+            $this->SendDebug(__FUNCTION__, 'No mDNS/DNSSD instance available', 0);
+            return [];
+        }
+
+        $huesync_info = [];
+
         foreach ($devices as $key => $huesync) {
+            // Defaults to avoid undefined-variable notices
+            $name       = '';
+            $hostname   = '';
+            $port       = 0;
+            $ip         = '';
+            $uniqueid   = '';
+            $devicetype = '';
+            $path       = '';
+
+            // Validate expected keys
+            if (!is_array($huesync) || !isset($huesync['Name'], $huesync['Type'], $huesync['Domain'])) {
+                $this->SendDebug(__FUNCTION__, 'Skipping invalid service entry: ' . json_encode($huesync), 0);
+                continue;
+            }
+
             $response = ZC_QueryService($mDNSInstanceID, $huesync['Name'], $huesync['Type'], $huesync['Domain']);
+            if (!is_array($response) || empty($response)) {
+                $this->SendDebug(__FUNCTION__, 'No response for service: ' . json_encode($huesync), 0);
+                continue;
+            }
+
             foreach ($response as $data) {
-                $name     = str_ireplace('._huesync._tcp.local.', '', $data["Name"]);
-                $hostname = str_ireplace('.local.', '', $data["Host"]);
-                $port     = $data["Port"];
-                $ip       = $data["IPv4"][0];
-                $fields   = $data["TXTRecords"];
-                foreach ($fields as $field) {
-                    $path = '';
-                    if (strpos($field, "path=") === 0) {
-                        $path = str_ireplace('path=', '', $field);
-                    }
-                    if (strpos($field, "uniqueid=") === 0) {
-                        $uniqueid = str_ireplace('uniqueid=', '', $field);
-                    }
-                    if (strpos($field, "devicetype=") === 0) {
-                        $devicetype = str_ireplace('devicetype=', '', $field);
-                    }
-                    if (strpos($field, "name=") === 0) {
-                        $name = str_ireplace('name=', '', $field);
+                if (!is_array($data)) {
+                    continue;
+                }
+
+                if (isset($data['Name'])) {
+                    $name = str_ireplace('._huesync._tcp.local.', '', (string) $data['Name']);
+                }
+
+                if (isset($data['Host'])) {
+                    $hostname = str_ireplace('.local.', '', (string) $data['Host']);
+                }
+
+                if (isset($data['Port'])) {
+                    $port = (int) $data['Port'];
+                }
+
+                // Prefer IPv4 if available
+                if (isset($data['IPv4']) && is_array($data['IPv4']) && isset($data['IPv4'][0])) {
+                    $ip = (string) $data['IPv4'][0];
+                }
+
+                // TXT records
+                if (isset($data['TXTRecords']) && is_array($data['TXTRecords'])) {
+                    foreach ($data['TXTRecords'] as $field) {
+                        $field = (string) $field;
+
+                        if (strpos($field, 'path=') === 0) {
+                            $path = substr($field, 5);
+                            continue;
+                        }
+                        if (strpos($field, 'uniqueid=') === 0) {
+                            $uniqueid = substr($field, 9);
+                            continue;
+                        }
+                        if (strpos($field, 'devicetype=') === 0) {
+                            $devicetype = substr($field, 11);
+                            continue;
+                        }
+                        if (strpos($field, 'name=') === 0) {
+                            $name = substr($field, 5);
+                            continue;
+                        }
                     }
                 }
             }
-            $huesync_info[$key] = [
+
+            // Skip incomplete entries (prevents undefined-variable spam and keeps configurator clean)
+            if ($ip === '' || $port <= 0) {
+                $this->SendDebug(__FUNCTION__, 'Skipping incomplete device (missing ip/port): ' . json_encode([
+                    'name' => $name,
+                    'hostname' => $hostname,
+                    'ip' => $ip,
+                    'port' => $port,
+                    'devicetype' => $devicetype,
+                    'uniqueid' => $uniqueid,
+                    'path' => $path
+                ]), 0);
+                continue;
+            }
+
+            $huesync_info[] = [
                 'name'       => $name,
                 'hostname'   => $hostname,
                 'host'       => $ip,
                 'port'       => $port,
                 'devicetype' => $devicetype,
                 'uniqueid'   => $uniqueid,
-                'path'       => $path];
+                'path'       => $path
+            ];
         }
 
         return $huesync_info;
     }
 
-    public function scan()
+    public function scan(): array
     {
         $mDNSInstanceID = $this->GetDNSSD();
-        $huesync_boxes  = ZC_QueryServiceType($mDNSInstanceID, '_huesync._tcp', '');
-        return $huesync_boxes;
+        if ($mDNSInstanceID <= 0) {
+            $this->SendDebug(__FUNCTION__, 'No mDNS/DNSSD instance available', 0);
+            return [];
+        }
+
+        $huesync_boxes = ZC_QueryServiceType($mDNSInstanceID, '_huesync._tcp', '');
+        return is_array($huesync_boxes) ? $huesync_boxes : [];
     }
 
     private function GetDNSSD()
     {
         $mDNSInstanceIDs = IPS_GetInstanceListByModuleID('{780B2D48-916C-4D59-AD35-5A429B2355A5}');
-        $mDNSInstanceID  = $mDNSInstanceIDs[0];
-        return $mDNSInstanceID;
+        if (!is_array($mDNSInstanceIDs) || count($mDNSInstanceIDs) === 0) {
+            return 0;
+        }
+        return (int) $mDNSInstanceIDs[0];
     }
 
     public function GetDevices()
     {
-        $devices = $this->ReadPropertyString('devices');
-
-        return $devices;
+        return $this->ReadAttributeString('devices');
     }
 
     public function Discover()

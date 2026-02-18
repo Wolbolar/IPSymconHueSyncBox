@@ -19,7 +19,7 @@ class HueSyncBox extends IPSModule
     private const Game_Mode  = 4;
 
 
-    public function Create()
+    public function Create(): void
     {
         //Never delete this line!
         parent::Create();
@@ -131,6 +131,9 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeBoolean('State', false);
         $this->RegisterPropertyInteger('ImportCategoryID', 0);
         $this->RegisterPropertyBoolean('HueSyncScript', false);
+        // WebHook (RS90 -> IP-Symcon)
+        $this->RegisterPropertyString('Token', 'rs90huesyncbox');
+        $this->RegisterPropertyBoolean('WebhookDebug', true);
         $this->RegisterAttributeBoolean('AlexaVoiceControl', false);
         $this->RegisterAttributeBoolean('GoogleVoiceControl', false);
         $this->RegisterAttributeBoolean('SiriVoiceControl', false);
@@ -140,13 +143,19 @@ class HueSyncBox extends IPSModule
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
     }
 
-    public function Destroy()
+    public function Destroy(): void
     {
+        // Debug-Information zur Überprüfung, dass Destroy aufgerufen wird
+        $this->SendDebug('Destroy', 'Destroy-Methode wird aufgerufen', 0);
+
+        // Webhook löschen, falls dieser existiert
+        $this->UnregisterHook('/hook/huesyncbox'. $this->InstanceID);
+
         //Never delete this line!
         parent::Destroy();
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         //Never delete this line!
         parent::ApplyChanges();
@@ -156,21 +165,22 @@ class HueSyncBox extends IPSModule
         }
 
         if (!$this->ValidateConfiguration()) {
+            $this->SetTimerInterval("Update", 0);
             return;
         }
 
+        //Only call this in READY state. On startup the WebHook instance might not be available yet
+        if (IPS_GetKernelRunlevel() == KR_READY) {
+            $this->RegisterHook('/hook/huesyncbox'. $this->InstanceID);
+            $this->RegisterMdnsService();
+        }
 
-    }
-
-    protected function SetHUESyncTimerInterval()
-    {
-        $update_interval = $this->ReadPropertyInteger('UpdateInterval');
-        $Interval        = $update_interval * 1000;
-        $this->SetTimerInterval("Update", $Interval);
+        // valid -> ensure timer interval set correctly
+        $this->SetHUESyncTimerInterval();
     }
 
     /** @noinspection PhpMissingParentCallCommonInspection */
-    public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
     {
 
         switch ($Message) {
@@ -191,14 +201,311 @@ class HueSyncBox extends IPSModule
         }
     }
 
+    private function RegisterHook($WebHook): void
+    {
+        $ids = IPS_GetInstanceListByModuleID('{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}');
+        if (count($ids) > 0) {
+            $hooks = json_decode(IPS_GetProperty($ids[0], 'Hooks'), true);
+            $found = false;
+            foreach ($hooks as $index => $hook) {
+                if ($hook['Hook'] == $WebHook) {
+                    if ($hook['TargetID'] == $this->InstanceID) {
+                        return;
+                    }
+                    $hooks[$index]['TargetID'] = $this->InstanceID;
+                    $found = true;
+                }
+            }
+            if (!$found) {
+                $hooks[] = ['Hook' => $WebHook, 'TargetID' => $this->InstanceID];
+            }
+            IPS_SetProperty($ids[0], 'Hooks', json_encode($hooks));
+            IPS_ApplyChanges($ids[0]);
+        }
+    }
+
+    private function UnregisterHook($WebHook)
+    {
+        // Hole die Liste der Instanzen des WebInterface-Moduls
+        $ids = IPS_GetInstanceListByModuleID('{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}');
+
+        if (count($ids) > 0) {
+            // Hole die aktuelle Hook-Liste
+            $hooks = json_decode(IPS_GetProperty($ids[0], 'Hooks'), true);
+
+            // Gehe die Hooks durch und finde den passenden Eintrag
+            foreach ($hooks as $index => $hook) {
+                if ($hook['Hook'] == $WebHook && $hook['TargetID'] == $this->InstanceID) {
+                    // Lösche den Webhook-Eintrag
+                    unset($hooks[$index]);
+                    break;
+                }
+            }
+
+            // Speichere die geänderte Hook-Liste
+            IPS_SetProperty($ids[0], 'Hooks', json_encode(array_values($hooks))); // array_values um die Indizes neu zu ordnen
+            IPS_ApplyChanges($ids[0]);
+        }
+    }
+
+    public function ProcessHookData()
+    {
+        $this->SendDebug(__FUNCTION__, 'HueSync WebHook called', 0);
+
+        // This method is called by the WebHook instance.
+        $method = strtolower((string)($_SERVER['REQUEST_METHOD'] ?? ''));
+
+        $data = $this->GetWebhookRequestData();
+        $action = strtolower((string)($data['action'] ?? ''));
+
+        $this->WebhookDebug('Hook', 'Method=' . $method . ' Action=' . $action . ' Data=' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        // If called outside of HTTP context (e.g. manual run) and no action was provided: do nothing silently.
+        if (!$this->IsHttpContext() && $action === '') {
+            return;
+        }
+
+        // Token check only in HTTP context
+        $expectedToken = (string)$this->ReadPropertyString('Token');
+        if ($this->IsHttpContext() && $expectedToken !== '') {
+            $token = (string)($data['token'] ?? '');
+            if (!hash_equals($expectedToken, $token)) {
+                $this->WebhookRespond(401, ['ok' => false, 'error' => 'Unauthorized']);
+                return;
+            }
+        }
+
+        try {
+            switch ($action) {
+                case 'device_info':
+                    $this->WebhookRespond(200, ['ok' => true, 'data' => $this->GetDeviceInfo()]);
+                    return;
+
+                case 'state':
+                    $this->WebhookRespond(200, ['ok' => true, 'data' => $this->GetCurrentState()]);
+                    return;
+
+                case 'power_on':
+                    $this->PowerOn();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'power_off':
+                    $this->PowerOff();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'power_toggle':
+                    $this->PowerToggle();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'restart':
+                    $this->RestartSyncBox();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'mode':
+                    $mode = (string)($data['mode'] ?? '');
+                    if ($mode === '') {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing mode']);
+                        return;
+                    }
+                    $this->Mode($mode);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'mode_next':
+                    $this->NextSyncMode();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'mode_prev':
+                    $this->PreviousSyncMode();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'intensity':
+                    $mode = (string)($data['mode'] ?? '');
+                    $intensity = (string)($data['intensity'] ?? '');
+                    if ($mode === '' || $intensity === '') {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing intensity parameters']);
+                        return;
+                    }
+                    $this->Intensity($mode, $intensity);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'intensity_next':
+                    $this->NextIntensity();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'intensity_prev':
+                    $this->PreviousIntensity();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'brightness':
+                    if (!array_key_exists('value', $data)) {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing brightness']);
+                        return;
+                    }
+                    $value = $this->ClampInt($data['value'], 0, 200);
+                    $this->Brightness($value);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'hdmi':
+                    if (!array_key_exists('input', $data)) {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing HDMI input']);
+                        return;
+                    }
+                    $input = $this->ClampInt($data['input'], 1, 4);
+                    $this->SetHDMIInput($input);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'hdmi_next':
+                    $this->NextHDMISource();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'hdmi_prev':
+                    $this->PreviousHDMISource();
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'background':
+                    $mode = (string)($data['mode'] ?? '');
+                    if ($mode === '' || !array_key_exists('state', $data)) {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing background parameters']);
+                        return;
+                    }
+                    $state = $this->AsBool($data['state']);
+                    $this->BackgroundLighting($mode, $state);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'led_mode':
+                    if (!array_key_exists('mode', $data)) {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing led mode']);
+                        return;
+                    }
+                    $mode = $this->ClampInt($data['mode'], 0, 2);
+                    $this->LEDMode($mode);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                case 'palette':
+                    $palette = (string)($data['palette'] ?? '');
+                    if ($palette === '') {
+                        $this->WebhookRespond(200, ['ok' => false, 'error' => 'Missing palette']);
+                        return;
+                    }
+                    $this->Palette($palette);
+                    $this->WebhookRespond(200, ['ok' => true]);
+                    return;
+
+                default:
+                    $this->WebhookRespond(200, ['ok' => false, 'error' => 'No action provided']);
+                    return;
+                }
+        } catch (Throwable $e) {
+            $this->WebhookDebug('ERROR', $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            $this->WebhookRespond(200, ['ok' => false, 'error' => $e->getMessage()]);
+            return;
+        }
+    }
+
+    // --- WebHook helper methods ---
+    private function IsHttpContext(): bool
+    {
+        return isset($_SERVER['REMOTE_ADDR']);
+    }
+
+    private function WebhookRespond(int $httpCode, array $payload): void
+    {
+        if ($this->IsHttpContext()) {
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            http_response_code($httpCode);
+            echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+        // Non-HTTP context (manual execution)
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function GetWebhookRequestData(): array
+    {
+        $data = [];
+
+        if (isset($_GET) && is_array($_GET)) {
+            foreach ($_GET as $k => $v) {
+                $data[$k] = $v;
+            }
+        }
+        if (isset($_POST) && is_array($_POST)) {
+            foreach ($_POST as $k => $v) {
+                $data[$k] = $v;
+            }
+        }
+
+        $raw = file_get_contents('php://input');
+        if (is_string($raw) && trim($raw) !== '') {
+            $json = json_decode($raw, true);
+            if (is_array($json)) {
+                $data = array_merge($data, $json);
+            }
+        }
+
+        return $data;
+    }
+    private function AsBool($v): bool
+    {
+        if (is_bool($v)) {
+            return $v;
+        }
+        return in_array(strtolower((string)$v), ['1', 'true', 'on', 'yes', 'an'], true);
+    }
+
+    private function ClampInt($v, int $min, int $max): int
+    {
+        $i = (int)$v;
+        return max($min, min($max, $i));
+    }
+
+    private function WebhookDebug(string $topic, string $message): void
+    {
+        if (!$this->ReadPropertyBoolean('WebhookDebug')) {
+            return;
+        }
+
+        $this->SendDebug('Webhook ' . $topic, $message, 0);
+
+        // Optional global log
+        IPS_LogMessage('HueSync WebHook', $topic . ': ' . $message);
+    }
+
+
+    protected function SetHUESyncTimerInterval(): void
+    {
+        $update_interval = $this->ReadPropertyInteger('UpdateInterval');
+        $Interval        = $update_interval * 1000;
+        $this->SetTimerInterval("Update", $Interval);
+    }
+
+
+
     private function ValidateConfiguration(): bool
     {
         $this->SetupVariables();
         $host         = $this->ReadPropertyString('Host');
         $access_token = $this->ReadAttributeString('AccessToken');
-        //IP prüfen
-        if (!filter_var($host, FILTER_VALIDATE_IP) === false) {
-            //IP ok
+        // IP prüfen
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             $ipcheck = true;
             $this->GetDeviceInfo();
         } else {
@@ -223,7 +530,7 @@ class HueSyncBox extends IPSModule
         return false;
     }
 
-    protected function SetupVariables()
+    protected function SetupVariables(): void
     {
         $this->RegisterProfile('Hue.Sync.Brightness', 'Intensity', '', ' %', 0, 200, 1, 0, VARIABLETYPE_INTEGER);
         $this->SetupVariable(
@@ -322,6 +629,12 @@ class HueSyncBox extends IPSModule
             'arcBypassMode', $this->Translate('ARC bypass'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
         );
 
+        // When the TV advertises Dolby Vision force to use native mode. Disabled 0, Enabled 1.
+        // Use a boolean switch in the UI, the attribute is stored as integer.
+        $this->SetupVariable(
+            'forceDoviNative', $this->Translate('Force Dolby Vision Native'), '~Switch', $this->_getPosition(), VARIABLETYPE_BOOLEAN, true, false
+        );
+
     }
 
     /** Variable anlegen / löschen
@@ -348,7 +661,7 @@ class HueSyncBox extends IPSModule
             switch ($vartype) {
                 case VARIABLETYPE_BOOLEAN:
                     $objid = $this->RegisterVariableBoolean($ident, $name, $profile, $position);
-                    if ($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode') {
+                    if ($ident == 'cecPowersave' || $ident == 'usbPowersave' || $ident == 'arcBypassMode' || $ident == 'forceDoviNative') {
                         $value = boolval($this->ReadAttributeInteger($ident));
                     } else {
                         $value = $this->ReadAttributeBoolean($ident);
@@ -377,12 +690,24 @@ class HueSyncBox extends IPSModule
                 $this->EnableAction($ident);
             }
         } else {
-            $objid = @$this->GetIDForIdent($ident);
+            $objid = $this->GetIDForIdentSafe($ident);
             if ($objid > 0) {
                 $this->UnregisterVariable($ident);
             }
         }
         return $objid;
+    }
+
+    /**
+     * Safely resolve an Ident to an object ID without throwing when it does not exist.
+     */
+    private function GetIDForIdentSafe(string $ident): int
+    {
+        try {
+            return $this->GetIDForIdent($ident);
+        } catch (Throwable $e) {
+            return 0;
+        }
     }
 
     public function SetWebFrontVariable(string $ident, bool $value)
@@ -461,9 +786,8 @@ class HueSyncBox extends IPSModule
             $wifiState = $device_info->wifiState;
             $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
         }
-        if(property_exists($device_info,'lastCheckedUpdate'))
-        {
-            $termsAgreed = $device_info->lastCheckedUpdate;
+        if (property_exists($device_info, 'termsAgreed')) {
+            $termsAgreed = (bool)$device_info->termsAgreed;
             $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
         }
         return $device_info;
@@ -561,8 +885,10 @@ class HueSyncBox extends IPSModule
             $this->SetValue('ledMode', $ledMode);
             $wifiState = $device_info->wifiState;
             $this->WriteAttributeString('wifiState', $wifiState); // uninitialized, disconnected, lan, wan
-            $termsAgreed = $device_info->lastCheckedUpdate;
-            $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
+            if (property_exists($device_info, 'termsAgreed')) {
+                $termsAgreed = (bool)$device_info->termsAgreed;
+                $this->WriteAttributeBoolean('termsAgreed', $termsAgreed);
+            }
             $device_action = $device_info->action;
             $this->WriteAttributeString('device_action', $device_action); // none, doSoftwareRestart,  doFirmwareUpdate
             $capabilities = $device_info->capabilities; // capabilities Root object for capabilities resource
@@ -597,12 +923,12 @@ class HueSyncBox extends IPSModule
             }
             $syncActive = $execution->syncActive; // Reports false in case of powersave or passthrough mode, and true in case of video, game, music, or ambient mode. When changed from false to true, it will start syncing in last used mode for current source. Requires hue /connectionState to be connected. When changed from true to false, will set passthrough mode.
             $this->WriteAttributeBoolean('syncActive', $syncActive);
-            if ($this->GetIDForIdent('syncActive') > 0) {
+            if ($this->GetIDForIdentSafe('syncActive') > 0) {
                 $this->SetValue('syncActive', $syncActive);
             }
             $hdmiActive = $execution->hdmiActive; // Reports false in case of powersave mode, and true in case of passthrough, video, game, music or ambient mode. When changed from false to true, it will set passthrough mode. When changed from true to false, will set powersave mode.
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
-            if ($this->GetIDForIdent('hdmiActive') > 0) {
+            if ($this->GetIDForIdentSafe('hdmiActive') > 0) {
                 $this->SetValue('hdmiActive', $hdmiActive);
             }
             $hdmiSource = $execution->hdmiSource; // input1, input2, input3, input4 (currently selected hdmi input)
@@ -665,7 +991,7 @@ class HueSyncBox extends IPSModule
             $input1      = $hdmi->input1;
             $input1_name = $input1->name; // Friendly name, not empty
             $this->WriteAttributeString('input1_name', $input1_name);
-            if (@$this->GetIDForIdent('input1_name') > 0) {
+            if ($this->GetIDForIdentSafe('input1_name') > 0) {
                 $this->SetValue('input1_name', $input1_name);
             }
             $input1_type = $input1->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -677,7 +1003,7 @@ class HueSyncBox extends IPSModule
             $input2      = $hdmi->input2;
             $input2_name = $input2->name; // Friendly name, not empty
             $this->WriteAttributeString('input2_name', $input2_name);
-            if (@$this->GetIDForIdent('input2_name') > 0) {
+            if ($this->GetIDForIdentSafe('input2_name') > 0) {
                 $this->SetValue('input2_name', $input2_name);
             }
             $input2_type = $input2->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -689,7 +1015,7 @@ class HueSyncBox extends IPSModule
             $input3      = $hdmi->input3;
             $input3_name = $input3->name; // Friendly name, not empty
             $this->WriteAttributeString('input3_name', $input3_name);
-            if (@$this->GetIDForIdent('input3_name') > 0) {
+            if ($this->GetIDForIdentSafe('input3_name') > 0) {
                 $this->SetValue('input3_name', $input3_name);
             }
             $input3_type = $input3->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -701,7 +1027,7 @@ class HueSyncBox extends IPSModule
             $input4      = $hdmi->input4;
             $input4_name = $input4->name; // Friendly name, not empty
             $this->WriteAttributeString('input4_name', $input4_name);
-            if (@$this->GetIDForIdent('input4_name') > 0) {
+            if ($this->GetIDForIdentSafe('input4_name') > 0) {
                 $this->SetValue('input4_name', $input4_name);
             }
             $input4_type = $input4->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -732,12 +1058,12 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeInteger('inactivePowersave', $inactivePowersave);
             $cecPowersave = $behavior->cecPowersave; // Device goes to powersave when TV sends CEC OFF. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('cecPowersave', $cecPowersave);
-            if (@$this->GetIDForIdent('cecPowersave') > 0) {
+            if ($this->GetIDForIdentSafe('cecPowersave') > 0) {
                 $this->SetValue('cecPowersave', boolval($cecPowersave));
             }
             $usbPowersave = $behavior->usbPowersave; // Device goes to powersave when USB power transitions from 5V to 0V. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('usbPowersave', $usbPowersave);
-            if (@$this->GetIDForIdent('usbPowersave') > 0) {
+            if ($this->GetIDForIdentSafe('usbPowersave') > 0) {
                 $this->SetValue('usbPowersave', boolval($usbPowersave));
             }
             $hpdInputSwitch = $behavior->hpdInputSwitch;
@@ -746,12 +1072,12 @@ class HueSyncBox extends IPSModule
 
             $arcBypassMode = $behavior->arcBypassMode;
             $this->WriteAttributeInteger('arcBypassMode', $arcBypassMode);
-            if (@$this->GetIDForIdent('arcBypassMode') > 0) {
+            if ($this->GetIDForIdentSafe('arcBypassMode') > 0) {
                 $this->SetValue('arcBypassMode', boolval($arcBypassMode));
             }
             $forceDoviNative = $behavior->forceDoviNative; // When the TV advertises Dolby Vision force to use native native mode. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('forceDoviNative', $forceDoviNative);
-            if (@$this->GetIDForIdent('forceDoviNative') > 0) {
+            if ($this->GetIDForIdentSafe('forceDoviNative') > 0) {
                 $this->SetValue('forceDoviNative', boolval($forceDoviNative));
             }
             $input1_cecInputSwitch = $behavior->input1->cecInputSwitch;
@@ -792,7 +1118,7 @@ class HueSyncBox extends IPSModule
         return $data_json;
     }
 
-    private function GetModeValue($mode)
+    private function GetModeValue($mode): int
     {
         // powersave, passthrough, video, game, music, ambient (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
         if ($mode == 'passthrough') {
@@ -811,7 +1137,7 @@ class HueSyncBox extends IPSModule
         return $mode_value;
     }
 
-    private function GetHDMIValue($hdmiSource)
+    private function GetHDMIValue($hdmiSource): int
     {
         // input1, input2, input3, input4 (currently selected hdmi input)
         if ($hdmiSource == 'input1') {
@@ -828,7 +1154,7 @@ class HueSyncBox extends IPSModule
         return $hdmiSource_value;
     }
 
-    private function GetIntensityValue($intensity)
+    private function GetIntensityValue($intensity): int
     {
         if ($intensity == 'subtle') {
             $intensity_value = 0;
@@ -844,29 +1170,31 @@ class HueSyncBox extends IPSModule
         return $intensity_value;
     }
 
-    private function GetPaletteValue($palette)
+    private function GetPaletteValue($palette): int
     {
-        if ($palette == 'happyEnergetic') {
-            $palette_value = 0;
-        } elseif ($palette == 'happyCalm') {
-            $palette_value = 1;
-        } elseif ($palette == 'melancholicCalm') {
-            $palette_value = 2;
-        } elseif ($palette == 'melancholic Energetic') {
-            $palette_value = 3;
-        } elseif ($palette == 'neutral') {
-            $palette_value = 4;
-        }else {
-            $palette_value = 1;
+        $p = strtolower(str_replace(' ', '', (string)$palette));
+
+        switch ($p) {
+            case 'happyenergetic':
+                return 0;
+            case 'happycalm':
+                return 1;
+            case 'melancholiccalm':
+                return 2;
+            case 'melancholicenergetic':
+                return 3;
+            case 'neutral':
+                return 4;
+            default:
+                return 1; // moderate / fallback
         }
-        return $palette_value;
     }
 
     /** Power on
      *
      * @return array
      */
-    public function PowerOn()
+    public function PowerOn(): array
     {
         $this->SetValue('State', true);
         $response = $this->Mode('passthrough');
@@ -878,7 +1206,7 @@ class HueSyncBox extends IPSModule
      *
      * @return array
      */
-    public function PowerOff()
+    public function PowerOff(): array
     {
         $this->SetValue('State', false);
         $response = $this->Mode('powersave');
@@ -889,9 +1217,10 @@ class HueSyncBox extends IPSModule
     /** Power Toggle
      *
      */
-    public function PowerToggle()
+    public function PowerToggle(): void
     {
-        $state = GetValue($this->GetIDForIdent('State'));
+        $stateVarId = $this->GetIDForIdentSafe('State');
+        $state = ($stateVarId > 0) ? GetValue($stateVarId) : false;
         if ($state) {
             $this->PowerOff();
         } else {
@@ -905,7 +1234,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function LEDMode(int $mode)
+    public function LEDMode(int $mode): mixed
     {
         return $this->SendDevice(['ledMode' => $mode]);
     }
@@ -926,7 +1255,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function SyncActive(bool $state)
+    public function SyncActive(bool $state): mixed
     {
         $response = $this->SendExecution(['syncActive' => $state]);
         $this->GetCurrentState();
@@ -949,7 +1278,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function HDMIActive(bool $state)
+    public function HDMIActive(bool $state): mixed
     {
         $response = $this->SendExecution(['hdmiActive' => $state]);
         $this->GetCurrentState();
@@ -1404,7 +1733,10 @@ class HueSyncBox extends IPSModule
     {
         $CategoryID = $this->ReadPropertyInteger('ImportCategoryID');
         //Prüfen ob Kategorie schon existiert
-        $HueSyncScriptCategoryID = @IPS_GetObjectIDByIdent('CatHueSyncScripts', $CategoryID);
+        $HueSyncScriptCategoryID = false;
+        if ($CategoryID > 0 && IPS_ObjectExists($CategoryID)) {
+            $HueSyncScriptCategoryID = IPS_GetObjectIDByIdent('CatHueSyncScripts', $CategoryID);
+        }
         if ($HueSyncScriptCategoryID === false) {
             $HueSyncScriptCategoryID = IPS_CreateCategory();
             IPS_SetName($HueSyncScriptCategoryID, $this->Translate('Hue Sync Scripts'));
@@ -1425,8 +1757,6 @@ class HueSyncBox extends IPSModule
         $this->CreateScript('Hue Sync Box HDMI 2', $this->CreateIdent('Hue Sync Box HDMI 2'), $HueSyncScriptCategoryID, $content);
         $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 3);';
         $this->CreateScript('Hue Sync Box HDMI 3', $this->CreateIdent('Hue Sync Box HDMI 3'), $HueSyncScriptCategoryID, $content);
-        $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 4);';
-        $this->CreateScript('Hue Sync Box HDMI 4', $this->CreateIdent('Hue Sync Box HDMI 4'), $HueSyncScriptCategoryID, $content);
         $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 4);';
         $this->CreateScript('Hue Sync Box HDMI 4', $this->CreateIdent('Hue Sync Box HDMI 4'), $HueSyncScriptCategoryID, $content);
         $content = '<?php HUESYNC_Mode(' . $this->InstanceID . ', \'passthrough\');';
@@ -1493,7 +1823,10 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
 
     protected function CreateScript($scriptname, $ident, $parent, $content)
     {
-        $ScriptID           = @IPS_GetObjectIDByIdent($ident, $parent);
+        $ScriptID = false;
+        if ($parent > 0 && IPS_ObjectExists($parent)) {
+            $ScriptID = IPS_GetObjectIDByIdent($ident, $parent);
+        }
         if ($ScriptID === false) {
             $ScriptID = IPS_CreateScript(0);
             IPS_SetName($ScriptID, $scriptname);
@@ -1654,72 +1987,116 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $str;
     }
 
-    protected function SendCommand($command, $type, $postfields = null)
+    protected function SendCommand($command, $type, $postfields = null): array
     {
+        $headers  = [];
+        $data_json = '';
+
         if ($postfields !== null) {
-            $data_json = json_encode($postfields);
+            $data_json = json_encode($postfields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($data_json === false) {
+                // json_encode failed -> do not break request, but log
+                $this->SendDebug(__FUNCTION__, 'json_encode failed: ' . json_last_error_msg(), 0);
+                $data_json = '';
+            }
         }
+
+        // Build headers
         if ($command == '/api/v1/device' && $type == 'GET') {
+            // unauthenticated GET device allowed for identification
             $headers = [];
         } elseif ($command == '/api/v1/registrations') {
-            $headers[] = "Accept-Charset: UTF-8";
-            $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
-        } elseif ($type == 'PUT') {
-            $headers[] = "Accept-Charset: UTF-8";
-            $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
-            $headers[] = "Content-Length: " . strlen($data_json);
-            $headers[] = "Authorization: Bearer " . $this->ReadAttributeString('AccessToken');
+            $headers[] = 'Accept-Charset: UTF-8';
+            $headers[] = 'Content-Type: application/json; charset=UTF-8';
+            // Registrations endpoint usually needs auth -> keep it consistent:
+            $token = (string)$this->ReadAttributeString('AccessToken');
+            if ($token !== '') {
+                $headers[] = 'Authorization: Bearer ' . $token;
+            }
         } else {
-            $headers[] = "Accept-Charset: UTF-8";
-            $headers[] = "Content-type: application/json;charset=\"UTF-8\"";
-            $headers[] = "Authorization: Bearer " . $this->ReadAttributeString('AccessToken');
+            $headers[] = 'Accept-Charset: UTF-8';
+            $headers[] = 'Content-Type: application/json; charset=UTF-8';
+
+            $token = (string)$this->ReadAttributeString('AccessToken');
+            if ($token !== '') {
+                $headers[] = 'Authorization: Bearer ' . $token;
+            }
+
+            // Only send Content-Length if we actually have a payload
+            if (($type === 'PUT' || $type === 'POST') && $postfields !== null) {
+                $headers[] = 'Content-Length: ' . strlen($data_json);
+            }
         }
 
         $url = 'https://' . $this->ReadPropertyString('Host') . $command;
 
         $ch = curl_init();
-        if ($type == 'PUT') {
+        curl_setopt($ch, CURLOPT_URL, $url);
+
+        // method + headers
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        if ($type === 'PUT') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        } elseif ($type === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+        } else {
+            // GET: default
+            curl_setopt($ch, CURLOPT_HTTPGET, true);
         }
-        if ($type == 'POST') {
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        // payload
+        if ($postfields !== null && ($type === 'PUT' || $type === 'POST')) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
         }
-        if ($type == 'GET') {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        }
+
+        // common curl opts
         curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_ENCODING, '');
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
+        // timeouts (prevents hanging)
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        // SSL (leave as-is for now; SyncBox uses self-signed)
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
-        if ($postfields !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
-        }
-
-        curl_setopt($ch, CURLOPT_URL, $url);
-
         $result = curl_exec($ch);
-        if (curl_errno($ch)) {
-            trigger_error('Error:' . curl_error($ch));
+
+        if ($result === false) {
+            $err  = curl_error($ch);
+            $info = curl_getinfo($ch) ?: [];
+            $this->SendDebug(__FUNCTION__, 'curl_exec failed: ' . $err, 0);
+
+            // Return a consistent structure even on curl failures
+            curl_close($ch);
+            return [
+                'http_code' => (int)($info['http_code'] ?? 0),
+                'header'    => [],
+                'body'      => '',
+                'error'     => $err
+            ];
         }
-        $info       = curl_getinfo($ch);
+
+        $info       = curl_getinfo($ch) ?: [];
         $header_out = curl_getinfo($ch, CURLINFO_HEADER_OUT);
-        $this->SendDebug(__FUNCTION__, 'Header Out:' . $header_out, 0);
+        if (is_string($header_out) && $header_out !== '') {
+            $this->SendDebug(__FUNCTION__, 'Header Out: ' . $header_out, 0);
+        }
+
         curl_close($ch);
 
-        return $this->getReturnValues($info, $result);
+        return $this->getReturnValues($info, (string)$result);
     }
 
     private function getReturnValues(array $info, string $result): array
     {
-        $HeaderSize = $info['header_size'];
+        $headerSize = (int)($info['header_size'] ?? 0);
+        $http_code  = (int)($info['http_code'] ?? 0);
 
-        $http_code = $info['http_code'];
         $this->SendDebug(__FUNCTION__, 'Response (http_code): ' . $http_code, 0);
         // Request Successfully	200	none	The request has been processed successfully. A JSON payload corresponding to the accessed URI (and credentials) is returned.
         // Invalid URI Path	404	none	Accessing URI path which is not supported
@@ -1727,13 +2104,20 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         //*If credentials are missing, continues on to GET only the Configuration state when unauthenticated, to allow for device identification.
         // Internal error	500	none	Internal errors like out of memory
 
-        $header = explode("\n", substr($result, 0, $HeaderSize));
+        // Defensive split
+        $rawHeader = ($headerSize > 0) ? substr($result, 0, $headerSize) : '';
+        $header    = ($rawHeader !== '') ? explode("\n", $rawHeader) : [];
+
         $this->SendDebug(__FUNCTION__, 'Response (header): ' . json_encode($header), 0);
 
-        $body = substr($result, $HeaderSize);
+        $body = ($headerSize > 0) ? substr($result, $headerSize) : $result;
         $this->SendDebug(__FUNCTION__, 'Response (body): ' . $body, 0);
 
-        return ['http_code' => $http_code, 'header' => $header, 'body' => $body];
+        return [
+            'http_code' => $http_code,
+            'header'    => $header,
+            'body'      => $body
+        ];
     }
 
     public function RequestAction($Ident, $Value)
