@@ -1739,18 +1739,24 @@ class HueSyncBox extends IPSModule
     protected function CreateHueSyncScriptCategory()
     {
         $CategoryID = $this->ReadPropertyInteger('ImportCategoryID');
-        //Prüfen ob Kategorie schon existiert
-        $HueSyncScriptCategoryID = false;
+
+        // Prüfen ob Kategorie schon existiert
+        $HueSyncScriptCategoryID = 0;
         if ($CategoryID > 0 && IPS_ObjectExists($CategoryID)) {
-            $HueSyncScriptCategoryID = IPS_GetObjectIDByIdent('CatHueSyncScripts', $CategoryID);
+            $tmpId = @IPS_GetObjectIDByIdent('CatHueSyncScripts', $CategoryID);
+            if (is_int($tmpId) && $tmpId > 0 && IPS_ObjectExists($tmpId)) {
+                $HueSyncScriptCategoryID = $tmpId;
+            }
         }
-        if ($HueSyncScriptCategoryID === false) {
+
+        if ($HueSyncScriptCategoryID <= 0) {
             $HueSyncScriptCategoryID = IPS_CreateCategory();
             IPS_SetName($HueSyncScriptCategoryID, $this->Translate('Hue Sync Scripts'));
             IPS_SetIdent($HueSyncScriptCategoryID, 'CatHueSyncScripts');
             IPS_SetInfo($HueSyncScriptCategoryID, $this->Translate('Hue Sync Scripts'));
             IPS_SetParent($HueSyncScriptCategoryID, $CategoryID);
         }
+
         $this->SendDebug('Hue Sync Script Category', strval($HueSyncScriptCategoryID), 0);
 
         return $HueSyncScriptCategoryID;
@@ -1830,17 +1836,27 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
 
     protected function CreateScript($scriptname, $ident, $parent, $content)
     {
-        $ScriptID = false;
+        $ScriptID = 0;
+
         if ($parent > 0 && IPS_ObjectExists($parent)) {
-            $ScriptID = IPS_GetObjectIDByIdent($ident, $parent);
+            $tmpId = @IPS_GetObjectIDByIdent($ident, $parent);
+            if (is_int($tmpId) && $tmpId > 0 && IPS_ObjectExists($tmpId)) {
+                $ScriptID = $tmpId;
+            }
         }
-        if ($ScriptID === false) {
+
+        if ($ScriptID <= 0) {
             $ScriptID = IPS_CreateScript(0);
             IPS_SetName($ScriptID, $scriptname);
             IPS_SetParent($ScriptID, $parent);
             IPS_SetIdent($ScriptID, $ident);
             IPS_SetScriptContent($ScriptID, $content);
+        } else {
+            // keep existing script up-to-date
+            IPS_SetName($ScriptID, $scriptname);
+            IPS_SetScriptContent($ScriptID, $content);
         }
+
         return $ScriptID;
     }
 
