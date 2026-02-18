@@ -185,13 +185,13 @@ class HueSyncBox extends IPSModule
         switch ($Message) {
             case IM_CHANGESTATUS:
                 if ($Data[0] === IS_ACTIVE) {
-                    $this->ApplyChanges();
+                    $this->RegisterHook('/hook/huesyncbox'. $this->InstanceID);
                 }
                 break;
 
             case IPS_KERNELMESSAGE:
                 if ($Data[0] === KR_READY) {
-                    $this->ApplyChanges();
+                    $this->RegisterHook('/hook/huesyncbox'. $this->InstanceID);
                 }
                 break;
 
@@ -700,8 +700,14 @@ class HueSyncBox extends IPSModule
     /**
      * Safely resolve an Ident to an object ID without throwing when it does not exist.
      */
-    private function GetIDForIdentSafe(string $ident): int
+    private function GetIDForIdentSafe($ident): int
     {
+        // Defensive: alles auf String ziehen, leere Idents abfangen
+        $ident = (string)$ident;
+        if ($ident === '') {
+            return 0;
+        }
+
         try {
             return $this->GetIDForIdent($ident);
         } catch (Throwable $e) {
@@ -718,13 +724,13 @@ class HueSyncBox extends IPSModule
     /** video, game, music, ambient
      * @return string
      */
-    public function GetLastSyncMode()
+    public function GetLastSyncMode(): string
     {
         $lastSyncMode = $this->ReadAttributeString('lastSyncMode');
         return $lastSyncMode;
     }
 
-    public function Update()
+    public function Update(): void
     {
         $this->GetCurrentState();
     }
