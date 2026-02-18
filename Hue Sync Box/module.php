@@ -689,30 +689,12 @@ class HueSyncBox extends IPSModule
                 $this->EnableAction($ident);
             }
         } else {
-            $objid = $this->GetIDForIdentSafe($ident);
+            $objid = @$this->GetIDForIdent($ident);
             if ($objid > 0) {
                 $this->UnregisterVariable($ident);
             }
         }
         return $objid;
-    }
-
-    /**
-     * Safely resolve an Ident to an object ID without throwing when it does not exist.
-     */
-    private function GetIDForIdentSafe($ident): int
-    {
-        // Defensive: alles auf String ziehen, leere Idents abfangen
-        $ident = (string)$ident;
-        if ($ident === '') {
-            return 0;
-        }
-
-        try {
-            return $this->GetIDForIdent($ident);
-        } catch (Throwable $e) {
-            return 0;
-        }
     }
 
     public function SetWebFrontVariable(string $ident, bool $value)
@@ -928,12 +910,12 @@ class HueSyncBox extends IPSModule
             }
             $syncActive = $execution->syncActive; // Reports false in case of powersave or passthrough mode, and true in case of video, game, music, or ambient mode. When changed from false to true, it will start syncing in last used mode for current source. Requires hue /connectionState to be connected. When changed from true to false, will set passthrough mode.
             $this->WriteAttributeBoolean('syncActive', $syncActive);
-            if ($this->GetIDForIdentSafe('syncActive') > 0) {
+            if (@$this->GetIDForIdent('syncActive') > 0) {
                 $this->SetValue('syncActive', $syncActive);
             }
             $hdmiActive = $execution->hdmiActive; // Reports false in case of powersave mode, and true in case of passthrough, video, game, music or ambient mode. When changed from false to true, it will set passthrough mode. When changed from true to false, will set powersave mode.
             $this->WriteAttributeBoolean('hdmiActive', $hdmiActive);
-            if ($this->GetIDForIdentSafe('hdmiActive') > 0) {
+            if (@$this->GetIDForIdent('hdmiActive') > 0) {
                 $this->SetValue('hdmiActive', $hdmiActive);
             }
             $hdmiSource = $execution->hdmiSource; // input1, input2, input3, input4 (currently selected hdmi input)
@@ -996,7 +978,7 @@ class HueSyncBox extends IPSModule
             $input1      = $hdmi->input1;
             $input1_name = $input1->name; // Friendly name, not empty
             $this->WriteAttributeString('input1_name', $input1_name);
-            if ($this->GetIDForIdentSafe('input1_name') > 0) {
+            if (@$this->GetIDForIdent('input1_name') > 0) {
                 $this->SetValue('input1_name', $input1_name);
             }
             $input1_type = $input1->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -1008,7 +990,7 @@ class HueSyncBox extends IPSModule
             $input2      = $hdmi->input2;
             $input2_name = $input2->name; // Friendly name, not empty
             $this->WriteAttributeString('input2_name', $input2_name);
-            if ($this->GetIDForIdentSafe('input2_name') > 0) {
+            if (@$this->GetIDForIdent('input2_name') > 0) {
                 $this->SetValue('input2_name', $input2_name);
             }
             $input2_type = $input2->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -1020,7 +1002,7 @@ class HueSyncBox extends IPSModule
             $input3      = $hdmi->input3;
             $input3_name = $input3->name; // Friendly name, not empty
             $this->WriteAttributeString('input3_name', $input3_name);
-            if ($this->GetIDForIdentSafe('input3_name') > 0) {
+            if (@$this->GetIDForIdent('input3_name') > 0) {
                 $this->SetValue('input3_name', $input3_name);
             }
             $input3_type = $input3->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -1032,7 +1014,7 @@ class HueSyncBox extends IPSModule
             $input4      = $hdmi->input4;
             $input4_name = $input4->name; // Friendly name, not empty
             $this->WriteAttributeString('input4_name', $input4_name);
-            if ($this->GetIDForIdentSafe('input4_name') > 0) {
+            if (@$this->GetIDForIdent('input4_name') > 0) {
                 $this->SetValue('input4_name', $input4_name);
             }
             $input4_type = $input4->type; // Friendly type: generic, video, game, music, xbox, playstation, nintendoswitch, phone, desktop, laptop, appletv, roku, shield, chromecast, firetv, diskplayer, settopbox, satellite, avreceiver, soundbar, hdmiswitch
@@ -1063,12 +1045,12 @@ class HueSyncBox extends IPSModule
             $this->WriteAttributeInteger('inactivePowersave', $inactivePowersave);
             $cecPowersave = $behavior->cecPowersave; // Device goes to powersave when TV sends CEC OFF. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('cecPowersave', $cecPowersave);
-            if ($this->GetIDForIdentSafe('cecPowersave') > 0) {
+            if (@$this->GetIDForIdent('cecPowersave') > 0) {
                 $this->SetValue('cecPowersave', boolval($cecPowersave));
             }
             $usbPowersave = $behavior->usbPowersave; // Device goes to powersave when USB power transitions from 5V to 0V. Default: 1. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('usbPowersave', $usbPowersave);
-            if ($this->GetIDForIdentSafe('usbPowersave') > 0) {
+            if (@$this->GetIDForIdent('usbPowersave') > 0) {
                 $this->SetValue('usbPowersave', boolval($usbPowersave));
             }
             $hpdInputSwitch = $behavior->hpdInputSwitch;
@@ -1077,12 +1059,12 @@ class HueSyncBox extends IPSModule
 
             $arcBypassMode = $behavior->arcBypassMode;
             $this->WriteAttributeInteger('arcBypassMode', $arcBypassMode);
-            if ($this->GetIDForIdentSafe('arcBypassMode') > 0) {
+            if (@$this->GetIDForIdent('arcBypassMode') > 0) {
                 $this->SetValue('arcBypassMode', boolval($arcBypassMode));
             }
             $forceDoviNative = $behavior->forceDoviNative; // When the TV advertises Dolby Vision force to use native native mode. Disabled 0, Enabled 1.
             $this->WriteAttributeInteger('forceDoviNative', $forceDoviNative);
-            if ($this->GetIDForIdentSafe('forceDoviNative') > 0) {
+            if (@$this->GetIDForIdent('forceDoviNative') > 0) {
                 $this->SetValue('forceDoviNative', boolval($forceDoviNative));
             }
             $input1_cecInputSwitch = $behavior->input1->cecInputSwitch;
@@ -1240,7 +1222,7 @@ class HueSyncBox extends IPSModule
      */
     public function PowerToggle(): void
     {
-        $stateVarId = $this->GetIDForIdentSafe('State');
+        $stateVarId = @$this->GetIDForIdent('State');
         $state = ($stateVarId > 0) ? GetValue($stateVarId) : false;
         if ($state) {
             $this->PowerOff();
