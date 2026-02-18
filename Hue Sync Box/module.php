@@ -172,7 +172,6 @@ class HueSyncBox extends IPSModule
         //Only call this in READY state. On startup the WebHook instance might not be available yet
         if (IPS_GetKernelRunlevel() == KR_READY) {
             $this->RegisterHook('/hook/huesyncbox'. $this->InstanceID);
-            $this->RegisterMdnsService();
         }
 
         // valid -> ensure timer interval set correctly
@@ -224,7 +223,7 @@ class HueSyncBox extends IPSModule
         }
     }
 
-    private function UnregisterHook($WebHook)
+    private function UnregisterHook($WebHook): void
     {
         // Hole die Liste der Instanzen des WebInterface-Moduls
         $ids = IPS_GetInstanceListByModuleID('{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}');
@@ -844,7 +843,7 @@ class HueSyncBox extends IPSModule
      *
      * @return array|mixed
      */
-    public function GetCurrentState()
+    public function GetCurrentState(): mixed
     {
         $result    = $this->SendCommand(self::APIPATH, 'GET');
         $data_json = 'could not get data';
@@ -1190,6 +1189,22 @@ class HueSyncBox extends IPSModule
         }
     }
 
+    private function DecodeJsonArray(string $body, string $context = ''): array
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return [];
+        }
+
+        $decoded = json_decode($body, true);
+        if (!is_array($decoded)) {
+            $this->SendDebug(__FUNCTION__, "json_decode failed ($context): " . json_last_error_msg() . " | body=" . $body, 0);
+            return [];
+        }
+
+        return $decoded;
+    }
+
     /** Power on
      *
      * @return array
@@ -1199,7 +1214,7 @@ class HueSyncBox extends IPSModule
         $this->SetValue('State', true);
         $response = $this->Mode('passthrough');
         $this->GetCurrentState();
-        return $response;
+        return is_array($response) ? $response : [];
     }
 
     /** Power off
@@ -1211,7 +1226,7 @@ class HueSyncBox extends IPSModule
         $this->SetValue('State', false);
         $response = $this->Mode('powersave');
         $this->GetCurrentState();
-        return $response;
+        return is_array($response) ? $response : [];
     }
 
     /** Power Toggle
@@ -1246,7 +1261,7 @@ class HueSyncBox extends IPSModule
     {
         $response = $this->SendExecution(['toggleSyncActive' => true]);
         $this->GetCurrentState();
-        return $response;
+        return is_array($response) ? $response : [];
     }
 
     /** Sync Active
@@ -1668,38 +1683,39 @@ class HueSyncBox extends IPSModule
         return $result;
     }
 
-    private function SendExecution($postfields)
+
+    private function SendExecution($postfields): array
     {
         $data = $this->SendCommand(self::APIPATH . '/execution', 'PUT', $postfields);
-        return json_decode($data['body']);
+        return $this->DecodeJsonArray((string)($data['body'] ?? ''), 'SendExecution');
     }
 
-    private function SendBehavior($postfields)
+    private function SendBehavior($postfields): array
     {
         $data = $this->SendCommand(self::APIPATH . '/behavior', 'PUT', $postfields);
-        return json_decode($data['body']);
+        return $this->DecodeJsonArray((string)($data['body'] ?? ''), 'SendBehavior');
     }
 
-    private function SendIR($postfields)
+    private function SendIR($postfields): array
     {
         $data = $this->SendCommand(self::APIPATH . '/ir', 'PUT', $postfields);
-        return json_decode($data['body']);
+        return $this->DecodeJsonArray((string)($data['body'] ?? ''), 'SendIR');
     }
 
-    private function SendDevice($postfields = null)
+    private function SendDevice($postfields = null): array
     {
         if ($postfields === null) {
             $data = $this->SendCommand(self::APIPATH . '/device', 'GET', $postfields);
         } else {
             $data = $this->SendCommand(self::APIPATH . '/device', 'PUT', $postfields);
         }
-        return json_decode($data['body']);
+        return $this->DecodeJsonArray((string)($data['body'] ?? ''), 'SendDevice');
     }
 
-    private function SendHue($postfields)
+    private function SendHue($postfields): array
     {
         $data = $this->SendCommand(self::APIPATH . '/hue', 'PUT', $postfields);
-        return json_decode($data['body']);
+        return $this->DecodeJsonArray((string)($data['body'] ?? ''), 'SendHue');
     }
 
     public function SetVoiceControl(string $type)
@@ -1718,7 +1734,7 @@ class HueSyncBox extends IPSModule
         }
     }
 
-    public function SetupHueSyncScripts()
+    public function SetupHueSyncScripts(): void
     {
         $huesyncscript = $this->ReadPropertyBoolean('HueSyncScript');
         $cat_id = $this->ReadPropertyInteger('ImportCategoryID');
@@ -1749,7 +1765,7 @@ class HueSyncBox extends IPSModule
         return $HueSyncScriptCategoryID;
     }
 
-    protected function CreateHueSyncScripts($HueSyncScriptCategoryID)
+    protected function CreateHueSyncScripts($HueSyncScriptCategoryID): void
     {
         $content = '<?php HUESYNC_SetHDMIInput(' . $this->InstanceID . ', 1);';
         $this->CreateScript('Hue Sync Box HDMI 1', $this->CreateIdent('Hue Sync Box HDMI 1'), $HueSyncScriptCategoryID, $content);
