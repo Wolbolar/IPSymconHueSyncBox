@@ -131,6 +131,17 @@ class HueSyncBox extends IPSModule
         $this->RegisterAttributeBoolean('State', false);
         $this->RegisterPropertyInteger('ImportCategoryID', 0);
         $this->RegisterPropertyBoolean('HueSyncScript', false);
+
+        // Registration UX state
+        $this->RegisterAttributeInteger('reg_seconds_left', 0);
+        $this->RegisterAttributeInteger('reg_seconds_total', 0);
+        $this->RegisterAttributeBoolean('reg_pending', false);
+        $this->RegisterAttributeBoolean('reg_success', false);
+        $this->RegisterAttributeString('reg_status', '');
+
+        // Timer used for registration retry loop (ticks each second while pending)
+        $this->RegisterTimer('RegistrationTimer', 0, 'HUESYNC_RegistrationTick($_IPS[\'TARGET\']);');
+
         // WebHook (RS90 -> IP-Symcon)
         $this->RegisterPropertyString('Token', 'rs90huesyncbox');
         $this->RegisterPropertyBoolean('WebhookDebug', true);
@@ -775,33 +786,165 @@ class HueSyncBox extends IPSModule
 
     /** Registration
      *
-     * @return array
+     * Ablauf:
+     * 1) Button "Registrieren" in Symcon drücken (sendet 1. POST)
+     * 2) Wenn "Invalid State" kommt: innerhalb von 5 Sekunden den Button an der Sync Box gedrückt halten,
+     *    bis LED grün blinkt (~3 Sekunden), dann loslassen.
+     * 3) Das Modul versucht in den nächsten Sekunden automatisch erneut den POST und holt den Token,
+     *    ohne dass der Nutzer erneut klicken muss.
      */
     public function Registration()
     {
-        $postfields = [
-            'appName' => $this->ReadPropertyString('app_name'),
-            'appSecret' => self::APPSECRET,
-            'instanceName' => $this->ReadPropertyString('instance_name')];
-        $response = $this->SendCommand('/api/v1/registrations', 'POST', $postfields);
-        if (isset($response['body'])) {
-            if ($response['body'] == '{"code":16,"message":"Invalid State"}') {
-                $this->SendDebug('Hue Sync Box', $this->Translate('device button is not yet pressed'), 0);
-                $this->SendDebug('Hue Sync Box', $this->Translate('Within 5 seconds of the response, hold the device button until the led blinks green (~3 seconds) and release.'), 0);
-                $this->SendDebug('Hue Sync Box', $this->Translate('Within 5 seconds of releasing, send the registration request again'), 0);
-                return [];
-            }
+        return $this->RegistrationStart();
+    }
 
-            $data = json_decode($response['body'], true);
-            if (isset($data['registrationId']) && isset($data['accessToken'])) {
-                $access_token = $data['accessToken'];
-                $registrationId = intval($data['registrationId']);
-                $this->WriteAccessToken($access_token, $registrationId);
-            }
-            return $response;
-        } else {
-            return [];
+    /** Startet den Registrierungsprozess und öffnet das Popup */
+    public function RegistrationStart(): array
+    {
+        // Reset UI state
+        $this->WriteAttributeBoolean('reg_pending', true);
+        $this->WriteAttributeBoolean('reg_success', false);
+        $totalSeconds = 8;
+        $this->WriteAttributeInteger('reg_seconds_total', $totalSeconds);
+        $this->WriteAttributeInteger('reg_seconds_left', $totalSeconds);
+        $this->WriteAttributeString('reg_status', $this->Translate('Registration started. If necessary: Now press the button on the Hue Sync Box.'));
+
+        // Open popup + initialize fields
+        $this->UpdateRegistrationFormUI(true);
+
+        // First try immediately
+        $result = $this->TryRegistrationOnce();
+        if ($this->ReadAttributeBoolean('reg_success')) {
+            $this->FinishRegistration(true);
+            return $result;
         }
+
+        // If not successful yet: start retry loop for 5 seconds
+        $this->SetTimerInterval('RegistrationTimer', 1000);
+        return $result;
+    }
+
+    public function RegistrationCancel(): void
+    {
+        $this->SetTimerInterval('RegistrationTimer', 0);
+        $this->WriteAttributeBoolean('reg_pending', false);
+        $this->WriteAttributeString('reg_status', $this->Translate('Registration cancelled.'));
+        $this->UpdateFormField('RegistrationPopup', 'visible', false);
+    }
+
+    /** Timer tick: retries registration while pending */
+    public function RegistrationTick(): void
+    {
+        if (!$this->ReadAttributeBoolean('reg_pending')) {
+            $this->SetTimerInterval('RegistrationTimer', 0);
+            return;
+        }
+
+        // Each tick: try again
+        $this->TryRegistrationOnce();
+
+        if ($this->ReadAttributeBoolean('reg_success')) {
+            $this->FinishRegistration(true);
+            return;
+        }
+
+        $left = $this->ReadAttributeInteger('reg_seconds_left');
+        $left = max(0, $left - 1);
+        $this->WriteAttributeInteger('reg_seconds_left', $left);
+        $this->UpdateRegistrationFormUI(true);
+
+        if ($left <= 0) {
+            $this->FinishRegistration(false);
+        }
+    }
+
+    /** Tries one POST /registrations and updates attributes/UI state */
+    private function TryRegistrationOnce(): array
+    {
+        $postfields = [
+            'appName'      => $this->ReadPropertyString('app_name'),
+            'appSecret'    => self::APPSECRET,
+            'instanceName' => $this->ReadPropertyString('instance_name')
+        ];
+
+        $response = $this->SendCommand('/api/v1/registrations', 'POST', $postfields);
+
+        $body = (string)($response['body'] ?? '');
+        $bodyTrim = trim($body);
+
+        // Typical "not yet pressed" response
+        if ($bodyTrim === '{"code":16,"message":"Invalid State"}' || $bodyTrim === '{"message":"Invalid State","code":16}') {
+            $this->WriteAttributeString(
+                'reg_status',
+                $this->Translate('Now press the button on the Hue Sync Box for approximately 3 seconds until the LED flashes green, then release it. The module will automatically try again.')
+            );
+            $this->UpdateRegistrationFormUI(true);
+            return $response;
+        }
+
+        // Try decode
+        $data = json_decode($body, true);
+        if (is_array($data) && isset($data['registrationId']) && isset($data['accessToken'])) {
+            $access_token = (string)$data['accessToken'];
+            $registrationId = (int)$data['registrationId'];
+            $this->WriteAccessToken($access_token, $registrationId);
+
+            $this->WriteAttributeBoolean('reg_success', true);
+            $this->WriteAttributeString('reg_status', $this->Translate('Registration successful. Token saved.'));
+            $this->UpdateRegistrationFormUI(true);
+            return $response;
+        }
+
+        // Other error / unexpected
+        if ($bodyTrim !== '') {
+            $this->WriteAttributeString('reg_status', $this->Translate('Registration not yet successful: ') . $bodyTrim);
+        } else {
+            $this->WriteAttributeString('reg_status', $this->Translate('Registration not yet successful (empty response).'));
+        }
+        $this->UpdateRegistrationFormUI(true);
+
+        return $response;
+    }
+
+    /** Ends the registration flow and updates UI */
+    private function FinishRegistration(bool $success): void
+    {
+        $this->SetTimerInterval('RegistrationTimer', 0);
+        $this->WriteAttributeBoolean('reg_pending', false);
+
+        if ($success) {
+            $this->WriteAttributeString('reg_status', $this->Translate('Registration successful.'));
+        } else {
+            $this->WriteAttributeString('reg_status', $this->Translate('Timeout. Please click "Retry" in the popup and try again.'));
+        }
+
+        $this->UpdateRegistrationFormUI(true);
+    }
+
+    /** Updates popup fields (visible, slider, status, retry button) */
+    private function UpdateRegistrationFormUI(bool $showPopup): void
+    {
+        $pending = $this->ReadAttributeBoolean('reg_pending');
+        $success = $this->ReadAttributeBoolean('reg_success');
+        $left   = $this->ReadAttributeInteger('reg_seconds_left');
+        $total  = $this->ReadAttributeInteger('reg_seconds_total');
+        $status = $this->ReadAttributeString('reg_status');
+
+        // ProgressBar expects 0..100
+        $percent = 0;
+        if ($total > 0) {
+            $percent = (int)round(($left / $total) * 100);
+            $percent = 100 - $percent;
+            // $percent = max(0, min(100, $percent));
+        }
+
+        $this->UpdateFormField('RegistrationPopup', 'visible', $showPopup);
+        $this->UpdateFormField('RegCountdown', 'current', $percent);
+        $this->UpdateFormField('RegStatus', 'caption', $status);
+        $this->UpdateFormField('RegStatus', 'caption', $status);
+
+        $this->UpdateFormField('RegSuccess', 'visible', $success);
+        $this->UpdateFormField('RegRetry', 'visible', (!$pending && !$success));
     }
 
     public function WriteAccessToken(string $access_token, int $registrationId)
@@ -2552,64 +2695,136 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
      */
     protected function FormActions()
     {
-        $access_token = $this->ReadAttributeString('AccessToken');
-        if ($access_token == '') {
-            $form = [
-                [
-                    'type' => 'Label',
-                    'caption' => 'Register IP-Symcon on Philips Hue Sync Box'],
-                [
-                    'type' => 'Label',
-                    'caption' => 'Hold button on Philips Hue Sync Box for few seconds until Led is green, then press the button Registration'],
-                [
-                    'type' => 'Button',
-                    'caption' => 'Registration',
-                    'onClick' => 'HUESYNC_Registration($id);'],];
-        } else {
-            $form = [
-                [
-                    'type' => 'ExpansionPanel',
-                    'caption' => 'Settings',
-                    'name' => 'settings',
-                    'visible' => true,
-                    'expanded' => false,
-                    'items' => [
+        $access_token = (string)$this->ReadAttributeString('AccessToken');
+        $hasToken = ($access_token !== '');
+
+        // --- Registration section (always visible) ---
+        $registrationLabel = $hasToken
+            ? 'Re-register IP-Symcon on Philips Hue Sync Box (use this if the stored token is no longer valid)'
+            : 'Register IP-Symcon on Philips Hue Sync Box';
+
+        $registrationButtonCaption = $hasToken ? 'Re-Register' : 'Registration';
+
+        $form = [
+            [
+                'type'    => 'Label',
+                'caption' => $registrationLabel
+            ],
+            [
+                'type'    => 'Label',
+                'caption' => "1) Click \"$registrationButtonCaption\" in Symcon.\n"
+                    . "2) When the popup appears: within 5 seconds, press and hold the button on the Hue Sync Box for ~3 seconds until the LED blinks green, then release.\n"
+                    . "3) The module will automatically try to obtain the token. If it doesn’t work, click \"Retry\" in the popup."
+            ],
+            [
+                'type'    => 'Button',
+                'caption' => $registrationButtonCaption,
+                'onClick' => 'HUESYNC_RegistrationStart($id);'
+            ],
+
+            // --- Registration PopupAlert (controlled via UpdateFormField in the module) ---
+            [
+                'type'    => 'PopupAlert',
+                'name'    => 'RegistrationPopup',
+                'visible' => false,
+                'popup'   => [
+                    // visible title of the popup (available since Symcon 8.2, harmless on older)
+                    'caption'      => 'Hue Sync Box – Registration',
+                    // caption of the close button
+                    'closeCaption' => 'Close',
+                    'items'        => [
                         [
-                            'type' => 'ExpansionPanel',
-                            'caption' => 'Entertainment Areas',
-                            'name' => 'EntertainmentSettings',
-                            'visible' => true,
-                            'expanded' => false,
-                            'items' => $this->FormEntertainmentSettings()],
+                            'type'    => 'Label',
+                            'caption' => 'Now press and hold the button on the Hue Sync Box for ~3 seconds until the LED blinks green, then release.'
+                        ],
                         [
-                            'type' => 'ExpansionPanel',
-                            'caption' => 'HDMI Inputs',
-                            'name' => 'HDMIInputs',
-                            'visible' => true,
-                            'expanded' => false,
-                            'items' => $this->FormHDMIInputsSettings()],
+                            'type'    => 'ProgressBar',
+                            'name'    => 'RegCountdown',
+                            'caption' => 'Time window (seconds)',
+                            'minimum' => 0,
+                            'maximum' => 100,
+                            'current' => 0
+                        ],
                         [
-                            'type' => 'ExpansionPanel',
-                            'caption' => 'Automatic Control',
-                            'name' => 'AutomaticControl',
-                            'visible' => true,
-                            'expanded' => false,
-                            'items' => $this->FormAutomaticControlSettings()],
+                            'type'    => 'Label',
+                            'name'    => 'RegStatus',
+                            'caption' => ''
+                        ],
                         [
-                            'type' => 'ExpansionPanel',
-                            'caption' => 'Advanced Synchronization Settings',
-                            'name' => 'AdvancedSynchronizationSettings',
-                            'visible' => true,
-                            'expanded' => false,
-                            'items' => $this->FormAdvancedSynchronizationSettings()],
+                            'type'    => 'Label',
+                            'name'    => 'RegSuccess',
+                            'caption' => 'Registration successful ✅',
+                            'visible' => false
+                        ]
+                    ],
+                    // bottom-right buttons (Close is always shown first)
+                    'buttons'      => [
                         [
-                            'type' => 'ExpansionPanel',
-                            'caption' => 'IR Codes',
-                            'name' => 'IRCodes',
-                            'visible' => true,
-                            'expanded' => false,
-                            'items' => $this->FormIRCodes()]]]];
+                            'caption' => 'Retry',
+                            'onClick' => 'HUESYNC_RegistrationStart($id);'
+                        ],
+                        [
+                            'caption' => 'Cancel',
+                            'onClick' => 'HUESYNC_RegistrationCancel($id);'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        // --- Settings section (only useful when we have a token) ---
+        if ($hasToken) {
+            $form[] = [
+                'type'     => 'ExpansionPanel',
+                'caption'  => 'Settings',
+                'name'     => 'settings',
+                'visible'  => true,
+                'expanded' => false,
+                'items'    => [
+                    [
+                        'type'     => 'ExpansionPanel',
+                        'caption'  => 'Entertainment Areas',
+                        'name'     => 'EntertainmentSettings',
+                        'visible'  => true,
+                        'expanded' => false,
+                        'items'    => $this->FormEntertainmentSettings()
+                    ],
+                    [
+                        'type'     => 'ExpansionPanel',
+                        'caption'  => 'HDMI Inputs',
+                        'name'     => 'HDMIInputs',
+                        'visible'  => true,
+                        'expanded' => false,
+                        'items'    => $this->FormHDMIInputsSettings()
+                    ],
+                    [
+                        'type'     => 'ExpansionPanel',
+                        'caption'  => 'Automatic Control',
+                        'name'     => 'AutomaticControl',
+                        'visible'  => true,
+                        'expanded' => false,
+                        'items'    => $this->FormAutomaticControlSettings()
+                    ],
+                    [
+                        'type'     => 'ExpansionPanel',
+                        'caption'  => 'Advanced Synchronization Settings',
+                        'name'     => 'AdvancedSynchronizationSettings',
+                        'visible'  => true,
+                        'expanded' => false,
+                        'items'    => $this->FormAdvancedSynchronizationSettings()
+                    ],
+                    [
+                        'type'     => 'ExpansionPanel',
+                        'caption'  => 'IR Codes',
+                        'name'     => 'IRCodes',
+                        'visible'  => true,
+                        'expanded' => false,
+                        'items'    => $this->FormIRCodes()
+                    ]
+                ]
+            ];
         }
+
         return $form;
     }
 
