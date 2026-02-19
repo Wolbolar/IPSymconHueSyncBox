@@ -35,7 +35,7 @@
             "Device type": "Gerätetyp",
             "API level": "API Level",
             "Build Number": "Build Nummer",
-            "Last Checked Update": "Letzer Updatecheck",
+            "Last Checked Update": "Letzter Updatecheck",
             "Updatable Build Number": "Verfügbare Build Nummer",
             "Updatable Firmware Version": "Verfügbare Firmware Version",
             "Auto Update Enabled": "Auto Update aktiv",
@@ -100,7 +100,23 @@
             "command": "Befehl",
             "device button is not yet pressed": "Der Knopf am Gerät wurde noch nicht gedrückt",
             "Within 5 seconds of the response, hold the device button until the led blinks green (~3 seconds) and release.": "Halten Sie innerhalb von 5 Sekunden nach der Antwort die Gerätetaste gedrückt, bis die LED grün blinkt (~ 3 Sekunden), und lassen Sie sie los.",
-            "Within 5 seconds of releasing, send the registration request again": "Senden Sie die Registrierungsanfrage innerhalb von 5 Sekunden nach der Freigabe erneut"
+            "Within 5 seconds of releasing, send the registration request again": "Senden Sie die Registrierungsanfrage innerhalb von 5 Sekunden nach der Freigabe erneut",
+            "1) Click \"Registration\" in Symcon.\n2) When the popup appears: within 5 seconds, press and hold the button on the Hue Sync Box for ~3 seconds until the LED blinks green, then release.\n3) The module will automatically try to obtain the token. If it doesn’t work, click \"Retry\" in the popup.": "1) In Symcon auf „Erneut Registrieren“ klicken.\n2) Wenn das Popup erscheint: innerhalb von 5 Sekunden den Button an der Hue Sync Box ca. 3 Sekunden gedrückt halten, bis die LED grün blinkt, dann loslassen.\n3) Das Modul versucht automatisch den Token zu holen. Falls es nicht klappt, im Popup auf „Retry“ klicken.",
+            "1) Click \"Re-Register\" in Symcon.\n2) When the popup appears: within 5 seconds, press and hold the button on the Hue Sync Box for ~3 seconds until the LED blinks green, then release.\n3) The module will automatically try to obtain the token. If it doesn’t work, click \"Retry\" in the popup.": "1) In Symcon auf „Registrieren“ klicken.\n2) Wenn das Popup erscheint: innerhalb von 5 Sekunden den Button an der Hue Sync Box ca. 3 Sekunden gedrückt halten, bis die LED grün blinkt, dann loslassen.\n3) Das Modul versucht automatisch den Token zu holen. Falls es nicht klappt, im Popup auf „Retry“ klicken.",
+            "Now press the button on the Hue Sync Box for approximately 3 seconds until the LED flashes green, then release it. The module will automatically try again.": "Jetzt Button an der Hue Sync Box ca. 3 Sekunden drücken bis LED grün blinkt, dann loslassen. Das Modul versucht automatisch erneut die Registrierung.",
+            "Registration successful. Token saved.": "Registrierung erfolgreich. Token gespeichert.",
+            "Registration not yet successful: ": "Registrierung noch nicht erfolgreich: ",
+            "Registration not yet successful (empty response).": "Registrierung noch nicht erfolgreich (leere Antwort).",
+            "Registration successful.": "Registrierung erfolgreich.",
+            "Timeout. Please click \"Retry\" in the popup and try again.": "Timeout. Bitte im Popup auf \"Retry\" klicken und erneut versuchen.",
+            "Re-register IP-Symcon on Philips Hue Sync Box (use this if the stored token is no longer valid)": "IP-Symcon auf der Philips Hue Sync Box erneut registrieren (verwenden Sie diese Option, wenn das gespeicherte Token nicht mehr gültig ist).",
+            "Re-Register": "Erneut Registrieren",
+            "Time window (seconds)": "Zeitfenster (Sekunden)",
+            "Now press and hold the button on the Hue Sync Box for ~3 seconds until the LED blinks green, then release.": "Drücken und halten Sie nun die Taste an der Hue Sync Box für etwa 3 Sekunden, bis die LED grün blinkt, und lassen Sie sie dann los.",
+            "Registration successful ✅": "Registrierung erfolgreich ✅",
+            "Close": "Schließen",
+            "Registration started. If necessary: Now press the button on the Hue Sync Box.": "Registrierung gestartet. Falls nötig: jetzt Button an der Hue Sync Box drücken.",
+            "Cancel": "Abbrechen"
         }
     }
 }
