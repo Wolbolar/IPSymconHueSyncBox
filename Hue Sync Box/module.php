@@ -495,9 +495,6 @@ class HueSyncBox extends IPSModule
         }
 
         $this->SendDebug('Webhook ' . $topic, $message, 0);
-
-        // Optional global log
-        IPS_LogMessage('HueSync WebHook', $topic . ': ' . $message);
     }
 
 
@@ -1921,7 +1918,6 @@ class HueSyncBox extends IPSModule
         $ScriptID_PowerOff = $this->CreateScript('Hue Sync Box Power Off', $this->CreateIdent('Hue Sync Box Power Off'), $HueSyncScriptCategoryID, $content);
         $content = '<?php
 $status = GetValueBoolean(IPS_GetObjectIDByIdent(\'State\', ' . $this->InstanceID . ')); // Status des Geräts auslesen
-IPS_LogMessage( "Hue Sync Box:" , "Befehl ausführen" );
 if ($status == false)// Befehl ausführen
 	{
    IPS_RunScript(' . $ScriptID_PowerOn . ');
@@ -2161,9 +2157,9 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         if ($postfields !== null) {
             $data_json = json_encode($postfields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($data_json === false) {
-                // json_encode failed -> do not break request, but log
-                $this->SendDebug(__FUNCTION__, 'json_encode failed: ' . json_last_error_msg(), 0);
-                $data_json = '';
+            // json_encode failed -> do not break request, but log
+            $this->SendDebug(__FUNCTION__, 'json_encode failed: ' . json_last_error_msg(), 0);
+            $data_json = '';
             }
         }
 
