@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../libs/ProfileHelper.php';
 require_once __DIR__ . '/../libs/ConstHelper.php';
 
-class HueSyncBox extends IPSModule
+class HueSyncBox extends IPSModuleStrict
 {
 
     use ProfileHelper;
@@ -160,7 +160,7 @@ class HueSyncBox extends IPSModule
         $this->SendDebug('Destroy', 'Destroy-Methode wird aufgerufen', 0);
 
         // Webhook löschen, falls dieser existiert
-        $this->UnregisterHook('/hook/huesyncbox' . $this->InstanceID);
+        $this->UnregisterHook('huesyncbox' . $this->InstanceID);
 
         //Never delete this line!
         parent::Destroy();
@@ -182,7 +182,7 @@ class HueSyncBox extends IPSModule
 
         //Only call this in READY state. On startup the WebHook instance might not be available yet
         if (IPS_GetKernelRunlevel() == KR_READY) {
-            $this->RegisterHook('/hook/huesyncbox' . $this->InstanceID);
+            $this->RegisterHook('huesyncbox' . $this->InstanceID);
         }
 
         // valid -> ensure timer interval set correctly
@@ -196,13 +196,13 @@ class HueSyncBox extends IPSModule
         switch ($Message) {
             case IM_CHANGESTATUS:
                 if ($Data[0] === IS_ACTIVE) {
-                    $this->RegisterHook('/hook/huesyncbox' . $this->InstanceID);
+                    $this->RegisterHook('huesyncbox' . $this->InstanceID);
                 }
                 break;
 
             case IPS_KERNELMESSAGE:
                 if ($Data[0] === KR_READY) {
-                    $this->RegisterHook('/hook/huesyncbox' . $this->InstanceID);
+                    $this->RegisterHook('huesyncbox' . $this->InstanceID);
                 }
                 break;
 
@@ -211,54 +211,7 @@ class HueSyncBox extends IPSModule
         }
     }
 
-    private function RegisterHook($WebHook): void
-    {
-        $ids = IPS_GetInstanceListByModuleID('{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}');
-        if (count($ids) > 0) {
-            $hooks = json_decode(IPS_GetProperty($ids[0], 'Hooks'), true);
-            $found = false;
-            foreach ($hooks as $index => $hook) {
-                if ($hook['Hook'] == $WebHook) {
-                    if ($hook['TargetID'] == $this->InstanceID) {
-                        return;
-                    }
-                    $hooks[$index]['TargetID'] = $this->InstanceID;
-                    $found = true;
-                }
-            }
-            if (!$found) {
-                $hooks[] = ['Hook' => $WebHook, 'TargetID' => $this->InstanceID];
-            }
-            IPS_SetProperty($ids[0], 'Hooks', json_encode($hooks));
-            IPS_ApplyChanges($ids[0]);
-        }
-    }
-
-    private function UnregisterHook($WebHook): void
-    {
-        // Hole die Liste der Instanzen des WebInterface-Moduls
-        $ids = IPS_GetInstanceListByModuleID('{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}');
-
-        if (count($ids) > 0) {
-            // Hole die aktuelle Hook-Liste
-            $hooks = json_decode(IPS_GetProperty($ids[0], 'Hooks'), true);
-
-            // Gehe die Hooks durch und finde den passenden Eintrag
-            foreach ($hooks as $index => $hook) {
-                if ($hook['Hook'] == $WebHook && $hook['TargetID'] == $this->InstanceID) {
-                    // Lösche den Webhook-Eintrag
-                    unset($hooks[$index]);
-                    break;
-                }
-            }
-
-            // Speichere die geänderte Hook-Liste
-            IPS_SetProperty($ids[0], 'Hooks', json_encode(array_values($hooks))); // array_values um die Indizes neu zu ordnen
-            IPS_ApplyChanges($ids[0]);
-        }
-    }
-
-    public function ProcessHookData()
+    public function ProcessHookData(): void
     {
         $this->SendDebug(__FUNCTION__, 'HueSync WebHook called', 0);
 
@@ -704,7 +657,7 @@ class HueSyncBox extends IPSModule
         return $objid;
     }
 
-    public function SetWebFrontVariable(string $ident, bool $value)
+    public function SetWebFrontVariable(string $ident, bool $value): void
     {
         $this->WriteAttributeBoolean($ident, $value);
         $this->SetupVariables();
@@ -728,7 +681,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function GetDeviceInfo()
+    public function GetDeviceInfo(): mixed
     {
         $device_info = $this->SendDevice();
 
@@ -790,7 +743,7 @@ class HueSyncBox extends IPSModule
      * 3) Das Modul versucht in den nächsten Sekunden automatisch erneut den POST und holt den Token,
      *    ohne dass der Nutzer erneut klicken muss.
      */
-    public function Registration()
+    public function Registration(): array
     {
         return $this->RegistrationStart();
     }
@@ -944,13 +897,13 @@ class HueSyncBox extends IPSModule
         $this->UpdateFormField('RegRetry', 'visible', (!$pending && !$success));
     }
 
-    public function WriteAccessToken(string $access_token, int $registrationId)
+    public function WriteAccessToken(string $access_token, int $registrationId): void
     {
         $this->WriteAttributeString('AccessToken', $access_token);
         $this->WriteAttributeInteger('registrationId', $registrationId);
     }
 
-    public function GetAccessToken()
+    public function GetAccessToken(): string
     {
         $token = $this->ReadAttributeString('AccessToken');
         return $token;
@@ -1415,7 +1368,7 @@ class HueSyncBox extends IPSModule
     /**
      * true toggles hdmiActive
      */
-    public function toggleHdmiActive()
+    public function toggleHdmiActive(): mixed
     {
         $response = $this->SendExecution(['toggleHdmiActive' => true]);
         $this->GetCurrentState();
@@ -1438,7 +1391,7 @@ class HueSyncBox extends IPSModule
     /** Previous SyncMode
      *
      */
-    public function PreviousSyncMode()
+    public function PreviousSyncMode(): mixed
     {
         $response = $this->SendExecution(['cycleSyncMode' => 'previous']);
         $this->GetCurrentState();
@@ -1448,7 +1401,7 @@ class HueSyncBox extends IPSModule
     /** Next SyncMode
      *
      */
-    public function NextSyncMode()
+    public function NextSyncMode(): mixed
     {
         $response = $this->SendExecution(['cycleSyncMode' => 'next']);
         $this->GetCurrentState();
@@ -1458,7 +1411,7 @@ class HueSyncBox extends IPSModule
     /** Previous HDMI Source
      *
      */
-    public function PreviousHDMISource()
+    public function PreviousHDMISource(): mixed
     {
         $response = $this->SendExecution(['cycleHdmiSource' => 'previous']);
         $this->GetCurrentState();
@@ -1468,7 +1421,7 @@ class HueSyncBox extends IPSModule
     /** Next HDMI Source
      *
      */
-    public function NextHDMISource()
+    public function NextHDMISource(): mixed
     {
         $response = $this->SendExecution(['cycleHdmiSource' => 'next']);
         $this->GetCurrentState();
@@ -1478,7 +1431,7 @@ class HueSyncBox extends IPSModule
     /** Previous Intensity
      * cycle intensity of current mode if syncing
      */
-    public function PreviousIntensity()
+    public function PreviousIntensity(): mixed
     {
         $response = $this->SendExecution(['cycleIntensity' => 'previous']);
         $this->GetCurrentState();
@@ -1488,7 +1441,7 @@ class HueSyncBox extends IPSModule
     /** Next Intensity
      * cycle intensity of current mode if syncing
      */
-    public function NextIntensity()
+    public function NextIntensity(): mixed
     {
         $response = $this->SendExecution(['cycleIntensity' => 'next']);
         $this->GetCurrentState();
@@ -1501,7 +1454,7 @@ class HueSyncBox extends IPSModule
      * powersave, passthrough, video, game, music, ambient (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
      * @return array
      */
-    public function Mode(string $mode)
+    public function Mode(string $mode): object|array|null
     {
         if ($mode == 'video') {
             $video = json_decode($this->ReadAttributeString('video'));
@@ -1529,7 +1482,7 @@ class HueSyncBox extends IPSModule
      *
      * @return array
      */
-    public function Brightness(int $brightness)
+    public function Brightness(int $brightness): object|array|null
     {
         $response = $this->SendExecution(['brightness' => $brightness]);
         $this->GetCurrentState();
@@ -1543,7 +1496,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function Intensity(string $mode, string $intensity)
+    public function Intensity(string $mode, string $intensity): mixed
     {
         $response = $this->SendExecution([$mode => ['intensity' => $intensity]]);
         $this->GetCurrentState();
@@ -1556,7 +1509,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function Palette(string $palette)
+    public function Palette(string $palette): mixed
     {
         $response = $this->SendExecution(['music' => ['palette' => $palette]]);
         $this->GetCurrentState();
@@ -1569,7 +1522,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function SetHDMIInput(int $input)
+    public function SetHDMIInput(int $input): mixed
     {
         $response = $this->SendExecution(['hdmiSource' => 'input' . $input]);
         $this->GetCurrentState();
@@ -1589,7 +1542,7 @@ class HueSyncBox extends IPSModule
      * autoUpdateTime UTC hour when the automatic update will check and execute, values 0 – 23. Default is 10. Ideally this value should be set to 3AM according to user’s timezone.
      * @return mixed
      */
-    public function SetFirmwareAutoupdate()
+    public function SetFirmwareAutoupdate(): mixed
     {
         return $this->SendDevice(['update' => ['autoUpdateEnabled' => true, 'autoUpdateTime' => 2]]);
     }
@@ -1603,7 +1556,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function RegisterHueBridge(string $bridge_ip, string $bridgeUniqueId, string $clientKey, string $username)
+    public function RegisterHueBridge(string $bridge_ip, string $bridgeUniqueId, string $clientKey, string $username): mixed
     {
         return $this->SendHue(
             ['bridgeIpAddress' => $bridge_ip, 'bridgeUniqueId' => $bridgeUniqueId, 'clientKey' => $clientKey, 'username' => $username]
@@ -1616,13 +1569,13 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function DefineControlledEntertainmentArea(string $area_id)
+    public function DefineControlledEntertainmentArea(string $area_id): mixed
     {
         $entertainment_area = $this->SendHue(['groupId' => $area_id]);
         return $entertainment_area;
     }
 
-    public function DefineInput1Name(string $name)
+    public function DefineInput1Name(string $name): mixed
     {
         $name2 = $this->ReadAttributeString('input2_name');
         $name3 = $this->ReadAttributeString('input3_name');
@@ -1631,7 +1584,7 @@ class HueSyncBox extends IPSModule
         return $input_names;
     }
 
-    public function DefineInput2Name(string $name)
+    public function DefineInput2Name(string $name): mixed
     {
         $name1 = $this->ReadAttributeString('input1_name');
         $name3 = $this->ReadAttributeString('input3_name');
@@ -1640,7 +1593,7 @@ class HueSyncBox extends IPSModule
         return $input_names;
     }
 
-    public function DefineInput3Name(string $name)
+    public function DefineInput3Name(string $name): mixed
     {
         $name1 = $this->ReadAttributeString('input1_name');
         $name2 = $this->ReadAttributeString('input2_name');
@@ -1649,7 +1602,7 @@ class HueSyncBox extends IPSModule
         return $input_names;
     }
 
-    public function DefineInput4Name(string $name)
+    public function DefineInput4Name(string $name): mixed
     {
         $name1 = $this->ReadAttributeString('input1_name');
         $name2 = $this->ReadAttributeString('input2_name');
@@ -1667,7 +1620,7 @@ class HueSyncBox extends IPSModule
      *
      * @return array|mixed
      */
-    protected function DefineInputNames(string $name1, string $name2, string $name3, string $name4)
+    protected function DefineInputNames(string $name1, string $name2, string $name3, string $name4): mixed
     {
         $input_names = $this->SendCommand(
             self::APIPATH . 'hdmi', 'PUT',
@@ -1683,7 +1636,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function CEC_PowerStateDetection(bool $state)
+    public function CEC_PowerStateDetection(bool $state): mixed
     {
         $response = $this->SendBehavior(['cecPowersave' => intval($state)]);
         $this->GetCurrentState();
@@ -1696,7 +1649,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function USB_PowerStateDetection(bool $state)
+    public function USB_PowerStateDetection(bool $state): mixed
     {
         $response = $this->SendBehavior(['usbPowersave' => intval($state)]);
         $this->GetCurrentState();
@@ -1709,7 +1662,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function HDMI_InactivityPowerState(int $minutes)
+    public function HDMI_InactivityPowerState(int $minutes): mixed
     {
         $response = $this->SendBehavior(['inactivePowersave' => $minutes]);
         $this->GetCurrentState();
@@ -1722,7 +1675,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function HDMI_InputDetected(bool $state)
+    public function HDMI_InputDetected(bool $state): mixed
     {
         $response = $this->SendBehavior(['hpdInputSwitch' => intval($state)]);
         $this->GetCurrentState();
@@ -1736,7 +1689,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function AutoSwitchInputs(int $input, bool $state)
+    public function AutoSwitchInputs(int $input, bool $state): mixed
     {
         $response = $this->SendBehavior(['input' . $input => ['cecInputSwitch' => intval($state)]]);
         $this->GetCurrentState();
@@ -1750,7 +1703,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function AutoSync(int $input, bool $state)
+    public function AutoSync(int $input, bool $state): mixed
     {
         $response = $this->SendBehavior(['input' . $input => ['linkAutoSync' => intval($state)]]);
         $this->GetCurrentState();
@@ -1764,7 +1717,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function BackgroundLighting(string $mode, bool $state)
+    public function BackgroundLighting(string $mode, bool $state): mixed
     {
         $response = $this->SendExecution([$mode => ['backgroundLighting' => $state]]);
         $this->GetCurrentState();
@@ -1775,7 +1728,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function ARC_Bypass(bool $state)
+    public function ARC_Bypass(bool $state): mixed
     {
         $response = $this->SendBehavior(['arcBypassMode' => intval($state)]);
         $this->GetCurrentState();
@@ -1799,7 +1752,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function IRScan(bool $state)
+    public function IRScan(bool $state): mixed
     {
         $response = $this->SendIR(['scan' => ['scanning' => intval($state)]]);
         $this->GetCurrentState();
@@ -1810,7 +1763,7 @@ class HueSyncBox extends IPSModule
      *
      * @return mixed
      */
-    public function RestartSyncBox()
+    public function RestartSyncBox(): mixed
     {
         $postfields = ['action' => 'doSoftwareRestart'];
         $data = $this->SendCommand(self::APIPATH . '/device', 'PUT', $postfields);
@@ -1853,7 +1806,7 @@ class HueSyncBox extends IPSModule
         return $this->DecodeJsonObject((string)($data['body'] ?? ''), 'SendHue');
     }
 
-    public function SetVoiceControl(string $type)
+    public function SetVoiceControl(string $type): void
     {
         if ($type == 'Alexa') {
             $this->SendDebug('Hue Sync', 'Setup Alexa Voice Control', 0);
@@ -1876,7 +1829,7 @@ class HueSyncBox extends IPSModule
         }
     }
 
-    protected function CreateHueSyncScriptCategory()
+    protected function CreateHueSyncScriptCategory(): int
     {
         $CategoryID = $this->ReadPropertyInteger('ImportCategoryID');
 
@@ -1973,7 +1926,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         $this->CreateScript('Hue Sync Box Next Intensity', $this->CreateIdent('Hue Sync Box Next Intensity'), $HueSyncScriptCategoryID, $content);
     }
 
-    protected function CreateScript($scriptname, $ident, $parent, $content)
+    protected function CreateScript($scriptname, $ident, $parent, $content): int
     {
         $ScriptID = 0;
 
@@ -1999,7 +1952,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $ScriptID;
     }
 
-    protected function CreateIdent($str)
+    protected function CreateIdent($str): array|string|null
     {
         $search = [
             'ä',
@@ -2282,7 +2235,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         ];
     }
 
-    public function RequestAction($Ident, $Value)
+    public function RequestAction($Ident, $Value): void
     {
         if ($Ident === 'Mode') {
             if ($Value == 0) {
@@ -2409,8 +2362,6 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
 
     }
 
-
-
     /***********************************************************
      * Configuration Form
      ***********************************************************/
@@ -2420,7 +2371,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
      *
      * @return string
      */
-    public function GetConfigurationForm()
+    public function GetConfigurationForm(): string
     {
         // return current form
         return json_encode(
@@ -2436,7 +2387,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
      *
      * @return array
      */
-    protected function FormHead()
+    protected function FormHead(): array
     {
         $access_token = $this->ReadAttributeString('AccessToken');
         $name = $this->ReadAttributeString('name');
@@ -2689,7 +2640,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
      *
      * @return array
      */
-    protected function FormActions()
+    protected function FormActions(): array
     {
         $access_token = (string)$this->ReadAttributeString('AccessToken');
         $hasToken = ($access_token !== '');
@@ -2824,7 +2775,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function FormEntertainmentSettings()
+    protected function FormEntertainmentSettings(): array
     {
         $form = [
             [
@@ -2886,7 +2837,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function GetEntertainmentZoneValues()
+    protected function GetEntertainmentZoneValues(): array
     {
         $hue_groupId = $this->ReadAttributeString('hue_groupId');
         $hue_groups_json = $this->ReadAttributeString('hue_groups');
@@ -2908,7 +2859,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $EntertainmentZoneValues;
     }
 
-    protected function FormHDMIInputsSettings()
+    protected function FormHDMIInputsSettings(): array
     {
         $form = [
             [
@@ -2992,7 +2943,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function FormAutomaticControlSettings()
+    protected function FormAutomaticControlSettings(): array
     {
         $form = [
             [
@@ -3071,7 +3022,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function FormAdvancedSynchronizationSettings()
+    protected function FormAdvancedSynchronizationSettings(): array
     {
         $form = [
             [
@@ -3153,7 +3104,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function FormIRCodes()
+    protected function FormIRCodes(): array
     {
         $form = [
             [
@@ -3189,7 +3140,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
         return $form;
     }
 
-    protected function GetIRCodeList()
+    protected function GetIRCodeList(): array
     {
         $codes = $this->ReadAttributeString('codes');
         $this->SendDebug('Get IR Codes', $codes, 0);
@@ -3213,7 +3164,7 @@ $response = HUESYNC_Intensity(' . $this->InstanceID . ', $mode, $intensity);';
      *
      * @return array
      */
-    protected function FormStatus()
+    protected function FormStatus(): array
     {
         $form = [
             [

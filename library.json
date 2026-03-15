@@ -4,7 +4,7 @@
     "name": "Philips Hue Sync Box",
     "url": "https://www2.meethue.com/de-de/p/hue-play-hdmi-sync-box/8718699704803",
     "compatibility": {
-        "version": "5.2"
+        "version": "9.0"
     },
     "version": "1.0",
     "build": 1,

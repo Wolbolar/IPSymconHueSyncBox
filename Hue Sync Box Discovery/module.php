@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-class HueSyncBoxDiscovery extends IPSModule
+class HueSyncBoxDiscovery extends IPSModuleStrict
 {
-    public function Create()
+    public function Create(): void
     {
         //Never delete this line!
         parent::Create();
@@ -19,7 +19,7 @@ class HueSyncBoxDiscovery extends IPSModule
     /**
      * Interne Funktion des SDK.
      */
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         //Never delete this line!
         parent::ApplyChanges();
@@ -28,13 +28,11 @@ class HueSyncBoxDiscovery extends IPSModule
             return;
         }
 
-        $this->StartDiscovery();
-
-        // Status Error Kategorie zum Import auswählen
         $this->SetStatus(IS_ACTIVE);
+        $this->SetTimerInterval('Discovery', 300000);
     }
 
-    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
     {
         switch ($Message) {
             case IM_CHANGESTATUS:
@@ -64,7 +62,13 @@ class HueSyncBoxDiscovery extends IPSModule
         if (empty($devices)) {
             $this->SendDebug('Discover:', 'could not find Hue Sync Box info', 0);
         } else {
-            $this->WriteAttributeString('devices', json_encode($devices));
+            $json = json_encode($devices);
+            if ($json === false) {
+                $this->SendDebug(__FUNCTION__, 'json_encode fehlgeschlagen: ' . json_last_error_msg(), 0);
+                $json = '[]';
+            }
+
+            $this->WriteAttributeString('devices', $json);
         }
 
         $this->SetTimerInterval('Discovery', 300000);
@@ -92,10 +96,10 @@ class HueSyncBoxDiscovery extends IPSModule
 
                 $device_id = 0;
                 foreach ($HueSyncBoxIDList as $HueSyncBoxID) {
-                    if ($host == IPS_GetProperty($HueSyncBoxID, 'Host')) {
+                    if ($host === IPS_GetProperty($HueSyncBoxID, 'Host')) {
                         $HueSyncBox_name = IPS_GetName($HueSyncBoxID);
                         $this->SendDebug(
-                            'Hue Sync Box Discovery', 'Hue Sync Box found: ' . utf8_decode($HueSyncBox_name) . ' (' . $HueSyncBoxID . ')', 0
+                            'Hue Sync Box Discovery', 'Hue Sync Box found: ' . $HueSyncBox_name . ' (' . $HueSyncBoxID . ')', 0
                         );
                         $instanceID = $HueSyncBoxID;
                     }
@@ -142,7 +146,7 @@ class HueSyncBoxDiscovery extends IPSModule
         return $huesync_infos;
     }
 
-    protected function GetHueSyncBoxInfo($devices): array
+    protected function GetHueSyncBoxInfo(array $devices): array
     {
         $mDNSInstanceID = $this->GetDNSSD();
         if ($mDNSInstanceID <= 0) {
@@ -261,7 +265,7 @@ class HueSyncBoxDiscovery extends IPSModule
         return is_array($huesync_boxes) ? $huesync_boxes : [];
     }
 
-    private function GetDNSSD()
+    private function GetDNSSD(): int
     {
         $mDNSInstanceIDs = IPS_GetInstanceListByModuleID('{780B2D48-916C-4D59-AD35-5A429B2355A5}');
         if (!is_array($mDNSInstanceIDs) || count($mDNSInstanceIDs) === 0) {
@@ -270,21 +274,28 @@ class HueSyncBoxDiscovery extends IPSModule
         return (int)$mDNSInstanceIDs[0];
     }
 
-    public function GetDevices()
+    public function GetDevices(): string
     {
         return $this->ReadAttributeString('devices');
     }
 
-    public function Discover()
+    public function Discover(): string
     {
-        if (empty($this->DiscoverDevices())) {
-            $devices = '';
-        } else {
-            $this->LogMessage($this->Translate('Background Discovery of Philips Hue Sync Box'), KL_NOTIFY);
-            $this->WriteAttributeString('devices', json_encode($this->DiscoverDevices()));
-            $devices = json_encode($this->DiscoverDevices());
+        $devices = $this->DiscoverDevices();
+        if (empty($devices)) {
+            return '';
         }
-        return $devices;
+
+        $this->LogMessage($this->Translate('Background Discovery of Philips Hue Sync Box'), KL_NOTIFY);
+
+        $json = json_encode($devices);
+        if ($json === false) {
+            $this->SendDebug(__FUNCTION__, 'json_encode fehlgeschlagen: ' . json_last_error_msg(), 0);
+            return '';
+        }
+
+        $this->WriteAttributeString('devices', $json);
+        return $json;
     }
 
     /***********************************************************
@@ -296,7 +307,7 @@ class HueSyncBoxDiscovery extends IPSModule
      *
      * @return string
      */
-    public function GetConfigurationForm()
+    public function GetConfigurationForm(): string
     {
         // return current form
         $Form = json_encode(
@@ -316,7 +327,7 @@ class HueSyncBoxDiscovery extends IPSModule
      *
      * @return array
      */
-    protected function FormElements()
+    protected function FormElements(): array
     {
         $form = [
             [
@@ -331,7 +342,7 @@ class HueSyncBoxDiscovery extends IPSModule
      *
      * @return array
      */
-    protected function FormActions()
+    protected function FormActions(): array
     {
         $form = [
             [
@@ -374,7 +385,7 @@ class HueSyncBoxDiscovery extends IPSModule
      *
      * @return array
      */
-    protected function FormStatus()
+    protected function FormStatus(): array
     {
         $form = [
             [
